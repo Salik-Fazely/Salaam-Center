@@ -19,6 +19,7 @@ CORE_PAGES = (
     "pricing/index.html",
     "about/index.html",
     "book-trial/index.html",
+    "contact/index.html",
     "privacy-policy/index.html",
     "terms/index.html",
     "success/index.html",
@@ -168,7 +169,7 @@ class BrandAndArchitectureTests(unittest.TestCase):
 
 
 class IntegrationAndMetadataSafetyTests(unittest.TestCase):
-    def test_all_public_pages_are_noindex_nofollow_without_production_canonicals(self):
+    def test_all_public_pages_are_noindex_nofollow_with_prepared_production_canonicals(self):
         for path in public_html_files():
             relative_path = path.relative_to(ROOT).as_posix()
             parser = parse(relative_path)
@@ -183,7 +184,10 @@ class IntegrationAndMetadataSafetyTests(unittest.TestCase):
                 for item in parser.links
                 if "canonical" in item.get("rel", "").lower().split()
             ]
-            self.assertEqual([], canonicals, relative_path)
+            route = "/" if relative_path == "index.html" else (
+                "/404.html" if relative_path == "404.html" else f"/{relative_path.removesuffix('index.html')}"
+            )
+            self.assertEqual([f"https://salaam.center{route}"], canonicals, relative_path)
 
     def test_no_inherited_analytics_or_conversion_code_remains_executable(self):
         executable = "\n".join(
@@ -199,17 +203,22 @@ class IntegrationAndMetadataSafetyTests(unittest.TestCase):
         ):
             self.assertNotIn(value, executable)
 
-    def test_no_active_form_or_inherited_contact_destination_exists(self):
+    def test_no_active_form_or_unapproved_contact_destination_exists(self):
         public = "\n".join(path.read_text(encoding="utf-8") for path in public_html_files())
-        self.assertNotRegex(public, r"<form\b")
-        self.assertNotRegex(public, r"<(?:input|select|textarea)\b")
-        for value in ("script.google.com", "wa.me/", "api.whatsapp.com", "mailto:", "tel:"):
+        trial = source("book-trial/index.html")
+        self.assertEqual(1, len(re.findall(r"<form\b", public)))
+        self.assertIn('data-prelaunch-disabled="true"', trial)
+        self.assertIn('data-endpoint=""', trial)
+        self.assertIn('<fieldset disabled>', trial)
+        self.assertNotRegex(trial, r'<form\b[^>]+action=')
+        for value in ("script.google.com", "wa.me/", "api.whatsapp.com", "tel:"):
             self.assertNotIn(value, public)
+        self.assertEqual(public.count("mailto:"), public.count("mailto:hello@salaam.center"))
         self.assertFalse((ROOT / "apps-script/Code.gs").exists())
 
     def test_no_production_or_deployment_files_are_present(self):
         self.assertFalse((ROOT / "CNAME").exists())
-        self.assertFalse((ROOT / "sitemap.xml").exists())
+        self.assertTrue((ROOT / "sitemap.xml").is_file())
         self.assertFalse((ROOT / "pricing.html").exists())
         workflows = ROOT / ".github/workflows"
         self.assertFalse(workflows.exists() and any(workflows.iterdir()))
@@ -251,12 +260,14 @@ class ProgramAndPrelaunchContentTests(unittest.TestCase):
             r"€\s*\d|\d\s*€",
         )
 
-    def test_trial_page_is_informative_and_collects_no_personal_data(self):
+    def test_trial_page_is_informative_and_cannot_collect_personal_data_prelaunch(self):
         page = source("book-trial/index.html")
         text = visible_text("book-trial/index.html")
-        self.assertIn("Online trial booking is being prepared and is not yet open.", text)
-        self.assertIn("Contact details and the secure booking form will be added before enrolment begins.", text)
-        self.assertNotRegex(page, r"<(?:form|input|select|textarea)\b")
+        self.assertIn("Secure online trial booking is being prepared and is not yet open.", text)
+        self.assertIn("The fields below show what the future request form will ask.", text)
+        self.assertIn('data-prelaunch-disabled="true"', page)
+        self.assertIn('<fieldset disabled>', page)
+        self.assertNotRegex(page, r'<form\b[^>]+action=')
 
     def test_submission_status_never_claims_a_request_was_sent(self):
         text = visible_text("success/index.html")
@@ -267,8 +278,8 @@ class ProgramAndPrelaunchContentTests(unittest.TestCase):
     def test_privacy_and_terms_are_honest_placeholders(self):
         privacy = visible_text("privacy-policy/index.html")
         terms = visible_text("terms/index.html")
-        self.assertIn("Privacy information is being prepared", privacy)
-        self.assertIn("not currently collecting trial-booking or payment information", privacy)
+        self.assertIn("Privacy information before enrolment opens", privacy)
+        self.assertIn("No live booking submissions are accepted", privacy)
         self.assertIn("Terms and conditions are being prepared", terms)
         self.assertIn(
             "Complete terms will be provided before any payment is accepted.",

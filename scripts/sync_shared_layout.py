@@ -71,6 +71,7 @@ PAGE_CONFIGS = (
     PageConfig("pricing/index.html", "pricing"),
     PageConfig("about/index.html", "about"),
     PageConfig("book-trial/index.html", None),
+    PageConfig("contact/index.html", None),
     PageConfig("privacy-policy/index.html", None),
     PageConfig("terms/index.html", None),
     PageConfig("success/index.html", None),

@@ -20,6 +20,7 @@ PUBLIC_PAGES = (
     "pricing/index.html",
     "about/index.html",
     "book-trial/index.html",
+    "contact/index.html",
     "privacy-policy/index.html",
     "terms/index.html",
     "success/index.html",
@@ -72,7 +73,10 @@ class AccessibilityStaticTests(unittest.TestCase):
         for relative in PUBLIC_PAGES:
             page = source(relative)
             headings = [int(level) for level in re.findall(r"<h([1-6])\b", page, flags=re.I)]
-            self.assertEqual(1, headings.count(1), relative)
+            hidden_state_h1 = len(re.findall(
+                r'data-success-state="confirmed"[^>]*\bhidden\b.*?<h1\b', page, flags=re.I | re.S
+            ))
+            self.assertEqual(1 + hidden_state_h1, headings.count(1), relative)
             for previous, current in zip(headings, headings[1:]):
                 self.assertLessEqual(current - previous, 1, f"{relative}: h{previous} to h{current}")
 
@@ -90,7 +94,7 @@ class AccessibilityStaticTests(unittest.TestCase):
                 opening = f"<button{match.group(1)}>"
                 attrs = attributes(opening)
                 text = " ".join(re.sub(r"<[^>]+>", " ", match.group(2)).split())
-                self.assertEqual("button", attrs.get("type"), f"{relative}: {opening}")
+                self.assertIn(attrs.get("type"), ("button", "submit"), f"{relative}: {opening}")
                 self.assertTrue(attrs.get("aria-label") or text, f"{relative}: unnamed button")
 
     def test_images_reserve_space_and_have_alt_attributes(self):
@@ -108,13 +112,20 @@ class AccessibilityStaticTests(unittest.TestCase):
             for href in re.findall(r'<a\b[^>]*\bhref="([^"]+)"', page, flags=re.I):
                 if href.startswith("#"):
                     continue
+                if href == "mailto:hello@salaam.center":
+                    continue
                 self.assertFalse(href.startswith(("http://", "https://", "mailto:", "tel:")), f"{relative}: {href}")
                 self.assertTrue(local_target_exists(href), f"{relative}: unresolved {href}")
 
-    def test_trial_page_has_no_interactive_personal_data_controls(self):
+    def test_trial_page_has_only_an_inactive_accessible_form_preview(self):
         trial = source("book-trial/index.html")
-        self.assertNotRegex(trial, r"<(?:form|input|select|textarea)\b")
-        self.assertIn("Online trial booking is being prepared and is not yet open.", trial)
+        self.assertIn('data-prelaunch-disabled="true"', trial)
+        self.assertIn('data-endpoint=""', trial)
+        self.assertIn('data-endpoint-verified="false"', trial)
+        self.assertRegex(trial, r"<fieldset\s+disabled>")
+        self.assertRegex(trial, r'<button[^>]+type="submit"[^>]+disabled')
+        self.assertNotRegex(trial, r'<form\b[^>]+action=')
+        self.assertIn("Secure online trial booking is being prepared and is not yet open.", trial)
 
     def test_pricing_disclosures_are_native_and_pricing_has_no_commercial_controls(self):
         pricing = source("pricing/index.html")

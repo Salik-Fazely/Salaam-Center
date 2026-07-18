@@ -6,7 +6,15 @@
   <title>Free Trial Information | Salaam Center</title>
   <meta name="description" content="Learn about Salaam Center’s free 40-minute trial and current pre-launch booking status." />
   <meta name="robots" content="noindex, nofollow" />
-  <meta property="og:type" content="website" /><meta property="og:title" content="Free Trial Information | Salaam Center" /><meta property="og:description" content="Start with a free 40-minute trial. Online booking is not yet open." /><meta property="og:site_name" content="Salaam Center" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Free Trial Information | Salaam Center" />
+  <meta property="og:description" content="Learn about Salaam Center’s free 40-minute trial and current pre-launch booking status." />
+  <meta property="og:url" content="https://salaam.center/book-trial/" />
+  <meta property="og:site_name" content="Salaam Center" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Free Trial Information | Salaam Center" />
+  <meta name="twitter:description" content="Learn about Salaam Center’s free 40-minute trial and current pre-launch booking status." />
+  <link rel="canonical" href="https://salaam.center/book-trial/" />
   <link rel="icon" href="/assets/logo/salaam-center-favicon.svg" type="image/svg+xml" /><link rel="stylesheet" href="/assets/css/styles.css" />
 </head>
 <body>
@@ -47,9 +55,73 @@
 
     <section class="section section--grey" aria-labelledby="trial-next-title"><div class="container"><div class="section-heading"><p class="eyebrow">After the conversation</p><h2 id="trial-next-title">What happens next?</h2><p>A recommendation may be offered, but the next step still depends on teacher, schedule or cohort availability.</p></div><ol class="process-list"><li><h3>Trial and learning discussion</h3><p>Discuss the learner&rsquo;s current direction, goals and suitable program.</p></li><li><h3>Teacher and schedule availability confirmation</h3><p>Confirm a suitable private teacher and time, or wait for a published group cohort.</p></li><li><h3>Plan selection</h3><p>For a private program, select one plan for one learner and one program.</p></li><li><h3>Review terms and payment information</h3><p>Review the complete terms and payment instructions before any payment.</p></li><li><h3>Paid classes begin</h3><p>Private paid lessons begin only after the schedule, plan and payment are confirmed.</p></li></ol></div></section>
 
-    <section class="section section--soft" aria-labelledby="booking-status-title"><div class="container"><div class="policy-placeholder"><p class="eyebrow">Pre-launch booking status</p><h2 id="booking-status-title">Online trial booking is being prepared and is not yet open.</h2><p>Contact details and the secure booking form will be added before enrolment begins.</p><div class="notice"><h3>No personal information is collected here</h3><p>This page has no active booking form, personal-information fields or submission action. It will not transmit trial requests.</p></div><ul class="link-list"><li><a class="text-link" href="/programs/">Explore Programs</a></li><li><a class="text-link" href="/how-it-works/">See How It Works</a></li></ul></div></div></section>
+    <section class="section section--soft" aria-labelledby="booking-status-title">
+      <div class="container form-shell">
+        <div class="section-heading">
+          <p class="eyebrow">Pre-launch booking status</p>
+          <h2 id="booking-status-title">Prepare for a secure trial request</h2>
+          <div class="notice notice--blue" id="form-prelaunch-status" role="status">
+            <h3>Secure online trial booking is being prepared and is not yet open.</h3>
+            <p>The fields below show what the future request form will ask. They are disabled, cannot be completed and will not transmit information while the verified booking service is inactive.</p>
+          </div>
+        </div>
 
-    <section class="section section--compact"><div class="container"><div class="notice notice--blue"><h2>Contact details will be available before enrolment opens.</h2><p>No email address, phone number, messaging account or social destination is published during this pre-launch phase.</p></div></div></section>
+        <form class="trial-form" data-trial-form data-prelaunch-disabled="true" data-endpoint="" data-endpoint-verified="false" novalidate aria-describedby="form-prelaunch-status">
+          <div class="error-summary" id="error-summary" role="alert" tabindex="-1" hidden></div>
+          <fieldset disabled>
+            <legend>Adult contact and learner details</legend>
+            <p class="required-note">Fields marked “Required” must be completed when booking opens.</p>
+
+            <fieldset class="form-group">
+              <legend>Contact role <span class="required-text">Required</span></legend>
+              <label class="choice"><input type="radio" name="contact_role" value="parent_guardian" required aria-describedby="contact-role-help contact_role-error" /> Parent or guardian</label>
+              <label class="choice"><input type="radio" name="contact_role" value="adult_woman" required aria-describedby="contact-role-help contact_role-error" /> Adult woman learner</label>
+              <p class="field-help" id="contact-role-help">A parent or guardian remains the primary contact for every learner under 18.</p>
+              <p class="field-error" id="contact_role-error" hidden></p>
+            </fieldset>
+
+            <div class="form-grid">
+              <div class="form-group"><label for="contact-name">Contact full name <span class="required-text">Required</span></label><input id="contact-name" name="contact_name" type="text" autocomplete="name" required aria-describedby="contact_name-error" /><p class="field-error" id="contact_name-error" hidden></p></div>
+              <div class="form-group"><label for="contact-email">Adult contact email <span class="required-text">Required</span></label><input id="contact-email" name="email" type="email" autocomplete="email" required aria-describedby="email-help email-error" /><p class="field-help" id="email-help">Do not enter a child’s personal email.</p><p class="field-error" id="email-error" hidden></p></div>
+              <div class="form-group"><label for="country">Country of residence <span class="required-text">Required</span></label><input id="country" name="country" type="text" autocomplete="country-name" required aria-describedby="country-error" /><p class="field-error" id="country-error" hidden></p></div>
+              <div class="form-group"><label for="timezone-city">Time zone or nearest city <span class="required-text">Required</span></label><input id="timezone-city" name="timezone_city" type="text" required aria-describedby="timezone-help timezone_city-error" /><p class="field-help" id="timezone-help">For example: Madrid, London, Toronto or your time zone.</p><p class="field-error" id="timezone_city-error" hidden></p></div>
+              <div class="form-group"><label for="learner-name">Learner first name <span class="required-text">Required</span></label><input id="learner-name" name="learner_first_name" type="text" autocomplete="off" required aria-describedby="learner-help learner_first_name-error" /><p class="field-help" id="learner-help">First name only. Do not enter a child’s surname.</p><p class="field-error" id="learner_first_name-error" hidden></p></div>
+            </div>
+
+            <fieldset class="form-group">
+              <legend>Learner group <span class="required-text">Required</span></legend>
+              <div class="choice-grid">
+                <label class="choice"><input type="radio" name="learner_group" value="age_5_7" required aria-describedby="learner_group-error" /> Age 5–7</label>
+                <label class="choice"><input type="radio" name="learner_group" value="age_8_11" required aria-describedby="learner_group-error" /> Age 8–11</label>
+                <label class="choice"><input type="radio" name="learner_group" value="age_12_16" required aria-describedby="learner_group-error" /> Age 12–16</label>
+                <label class="choice"><input type="radio" name="learner_group" value="adult_woman" required aria-describedby="learner_group-error" /> Adult woman</label>
+              </div>
+              <p class="field-error" id="learner_group-error" hidden></p>
+            </fieldset>
+
+            <fieldset class="form-group">
+              <legend>Program <span class="required-text">Required</span></legend>
+              <label class="choice"><input type="radio" name="program" value="quran" required aria-describedby="program-error" /> Quran</label>
+              <label class="choice"><input type="radio" name="program" value="dari_persian" required aria-describedby="program-error" /> Dari/Persian</label>
+              <label class="choice"><input type="radio" name="program" value="culture_ethics" required aria-describedby="culture-note program-error" /> Afghan Culture &amp; Islamic Ethics</label>
+              <p class="field-help" id="culture-note">For Culture &amp; Islamic Ethics, final frequency follows cohort availability and private-plan prices do not apply.</p>
+              <p class="field-error" id="program-error" hidden></p>
+            </fieldset>
+
+            <div class="form-grid">
+              <div class="form-group"><label for="frequency">Preferred class frequency <span class="required-text">Required</span></label><select id="frequency" name="frequency" required aria-describedby="frequency-error"><option value="">Select one</option><option value="1_week">1 class per week</option><option value="2_week">2 classes per week</option><option value="4_week">4 classes per week</option><option value="not_sure">Not sure yet</option></select><p class="field-error" id="frequency-error" hidden></p></div>
+              <div class="form-group form-group--full"><label for="availability">Preferred availability <span class="required-text">Required</span></label><textarea id="availability" name="availability" rows="5" required aria-describedby="availability-help availability-error"></textarea><p class="field-help" id="availability-help">Share preferred days, time windows and time-zone context. Availability is not guaranteed.</p><p class="field-error" id="availability-error" hidden></p></div>
+              <div class="form-group form-group--full"><label for="level-goals">Current learning level and goals <span class="optional-text">Optional</span></label><textarea id="level-goals" name="level_goals" rows="5" aria-describedby="goals-help level_goals-error"></textarea><p class="field-help" id="goals-help">Do not include medical information, diagnoses, government identifiers, financial information, passwords or other highly sensitive personal information.</p><p class="field-error" id="level_goals-error" hidden></p></div>
+            </div>
+
+            <div class="form-group acknowledgement"><label class="choice"><input type="checkbox" name="privacy_acknowledgement" value="acknowledged" required aria-describedby="privacy-help privacy_acknowledgement-error" /> <span>I have read the current <a href="/privacy-policy/">Privacy information</a> and understand that this form will only become active after Salaam Center publishes its final privacy notice.</span></label><p class="field-help" id="privacy-help">This acknowledgement is not marketing consent.</p><p class="field-error" id="privacy_acknowledgement-error" hidden></p></div>
+            <div class="honeypot" aria-hidden="true"><input type="text" name="_gotcha" tabindex="-1" aria-hidden="true" autocomplete="off" /></div>
+            <button class="btn btn--primary" type="submit" disabled>Request a Free Trial</button>
+          </fieldset>
+        </form>
+        <p class="small-print">Questions may be sent through the <a href="/contact/">Contact page</a>. The planned public mailbox has not yet been operationally verified.</p>
+      </div>
+    </section>
   </main>
   <!-- SHARED FOOTER:START -->
   <footer class="site-footer">
@@ -61,7 +133,7 @@
             <span>Salaam Center</span>
           </a>
           <p class="footer__tagline">Online learning for language, faith, and Afghan heritage.</p>
-          <p class="footer__contact">Contact details will be available before enrolment opens.</p>
+          <p class="footer__contact">Email enquiries: <a class="footer__link" href="mailto:hello@salaam.center">hello@salaam.center</a>. Mailbox verification remains pending before launch.</p>
         </div>
 
         <nav class="footer__col" aria-label="Programs and approach">
@@ -80,6 +152,7 @@
           <ul role="list">
             <li><a href="/about/" class="footer__link">About</a></li>
             <li><a href="/book-trial/" class="footer__link">Free Trial</a></li>
+            <li><a href="/contact/" class="footer__link">Contact</a></li>
           </ul>
         </nav>
 
@@ -101,5 +174,6 @@
   </footer>
   <!-- SHARED FOOTER:END -->
   <script src="/assets/js/main.js"></script>
+  <script src="/assets/js/trial-form.js"></script>
 </body>
 </html>

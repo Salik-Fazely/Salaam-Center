@@ -1,0 +1,20 @@
+{
+  "site_mode": "prelaunch",
+  "production_origin": "https://salaam.center",
+  "contact_email": "hello@salaam.center",
+  "contact_email_verified": false,
+  "booking_provider": "formspree",
+  "booking_endpoint": "",
+  "booking_endpoint_verified": false,
+  "formspree_domain_restriction_confirmed": false,
+  "legal_controller_name": "",
+  "legal_controller_address": "",
+  "privacy_policy_final_approved": false,
+  "terms_final_approved": false,
+  "domain_verified_with_github": false,
+  "github_pages_enabled": false,
+  "dns_configured": false,
+  "https_confirmed": false,
+  "analytics_mode": "none",
+  "search_console_enabled": false
+}

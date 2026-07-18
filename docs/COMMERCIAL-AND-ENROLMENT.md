@@ -256,12 +256,19 @@ This conclusion addresses direct teacher cost only. It is not a claim of final p
 - **Legal-entity information** — unresolved.
 - **Final Terms and Conditions** — unresolved.
 - **Final Privacy Policy** — unresolved.
-- **Contact details** — unresolved.
-- **Live form and backend** — not approved or active.
-- **Analytics** — not approved or active.
-- **Production SEO** — not approved; pages remain noindex and without production canonicals.
+- **Contact mailbox** — `hello@salaam.center` is approved as the single intended public address but inbound and outbound verification remain unresolved.
+- **Live form and backend** — Formspree is planned but no account, endpoint or backend is approved or active.
+- **Analytics** — initial launch is explicitly approved with no analytics and no advertising pixels.
+- **Production SEO** — production-origin metadata and an unsubmitted sitemap are prepared; pages remain noindex and crawling remains blocked.
 - **Deployment approval** — unresolved; no Pages, workflow, CNAME, domain, DNS, Search Console or publishing action is authorized.
 
 ## Change control
 
 Any change to price, scope, class count, validity, trial, absence rules, benefits or eligibility requires explicit approval plus coordinated updates to public copy, authority documentation, scanner associations and regression tests. Legal or operational readiness does not follow merely from implementing the static noindex page.
+
+## Initial launch privacy and storage position
+
+- Initial launch uses no analytics and no advertising pixels, so no analytics-consent banner is required.
+- Essential browser storage is limited to short-lived form-success state and interface behavior. It is not an analytics mechanism.
+- Video playback remains user-activated and uses the privacy-enhanced YouTube domain.
+- Any future analytics proposal requires a separate future approval and privacy review.

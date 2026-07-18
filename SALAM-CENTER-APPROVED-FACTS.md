@@ -189,7 +189,7 @@ The pricing page may exist in the noindex pre-launch website, but none of the fo
 
 - **Teacher-compensation review** — resolved for current pre-launch pricing at €1.50 per eligible 40-minute lesson
 - **Gross-margin review** — direct teacher-cost contribution is recorded, but the final minimum net-margin policy remains unresolved
-- **Payment-provider selection and fees** — unresolved; no provider may be named or activated
+- **Payment-provider selection and fees** — unresolved; no payment provider may be named or activated
 - **Tax and accounting review** — unresolved, including tax treatment and price presentation
 - **Refund and consumer-law review** — unresolved for the legal entity, customer locations, payment method and service start
 - **Administrative cost** — unresolved
@@ -199,10 +199,10 @@ The pricing page may exist in the noindex pre-launch website, but none of the fo
 - **Legal-entity information** — unresolved
 - **Final Terms and Conditions** — unresolved and not approved for public contractual use
 - **Final Privacy Policy** — unresolved and not approved as a final legal policy
-- **Contact details** — unresolved
-- **Live form and backend** — prohibited until separately approved
-- **Analytics** — prohibited until separately approved with a lawful consent basis
-- **Production SEO** — unresolved; all pages remain noindex and without production canonicals
+- **Contact mailbox** — `hello@salaam.center` is approved as the single planned public address, but inbound and outbound verification remain unresolved
+- **Live form and backend** — Formspree is approved only as planned architecture; no account, endpoint or submission path may be activated until separately approved and verified
+- **Analytics** — initial launch is approved with no analytics; any future analytics proposal requires separate approval and privacy review
+- **Production SEO** — production-origin metadata and an unsubmitted sitemap are prepared; all pages remain noindex and crawling remains blocked
 - **Deployment approval** — unresolved; no publishing, Pages, domain or DNS action is authorized
 
 Teacher-compensation review is resolved for current pre-launch pricing. Production approval still requires review of payment-provider fees, tax and accounting treatment, administrative cost, marketing and acquisition cost, refund and chargeback exposure, consumer law and the final minimum net-margin policy.
@@ -261,14 +261,16 @@ The following remain unresolved and not approved for public claims:
 - Final curriculum stages, homework and materials
 - Formal assessment process, if any
 - Delivery tooling for progress summaries, supplementary resources and eligible completion recognition
-- Secure trial-booking backend
+- Activation and verification of the planned Formspree trial-booking integration
 - Secure payment provider and operational payment workflow (the approved sequence is documented above)
-- Analytics property and consent basis
-- Final production metadata and canonical activation
+- Any separately approved future analytics architecture and privacy treatment
+- Production indexing activation, including noindex removal and production robots rules
 
-## 12. Unresolved contact details
+## 12. Planned contact details
 
-No Salaam Center email address, phone number, WhatsApp account, social account or physical address is approved. Public copy must say: **Contact details will be available before enrolment opens.**
+`hello@salaam.center` is the single approved planned public mailbox for general questions, trial enquiries, privacy questions and enrolment communication. Public copy may display it while making clear that operational send-and-receive verification remains pending. Production preflight must remain blocked until `contact_email_verified` is true.
+
+No phone number, WhatsApp account, social account or physical address is approved for public use at initial launch.
 
 ## 13. Unresolved legal details
 
@@ -302,4 +304,37 @@ The pre-launch foundation is not approval to deploy, publish, enable GitHub Page
 
 ## 16. Pre-launch noindex rule
 
-Every public HTML page must contain `noindex, nofollow`. No production canonical or production sitemap is active. This directive may be removed only during an explicitly approved deployment and SEO phase, together with a complete metadata, domain and indexing review.
+Every public HTML page must contain `noindex, nofollow`. Production-origin canonical metadata and an unsubmitted sitemap may be prepared while crawling remains blocked. This directive may be removed only during an explicitly approved deployment and SEO phase, together with a complete metadata, domain and indexing review.
+
+## 17. Production launch-readiness decisions
+
+### Approved public facts
+
+- The only intended production origin is `https://salaam.center`.
+- The single planned public mailbox is `hello@salaam.center` for general questions, trial enquiries, privacy questions and enrolment communication. It is not operationally verified while `contact_email_verified` is false.
+- A parent or guardian remains the primary contact for every learner under 18. Children are not invited to contact teachers directly.
+- No public WhatsApp number, telephone number, physical address or social account is approved for initial launch.
+- Initial launch uses no analytics and no advertising pixels. It therefore does not require an analytics-consent banner.
+- The user-activated video player remains privacy-enhanced. Essential browser storage may be used only for short-lived form-success state and interface behavior.
+- Analytics requires a separate future approval and privacy review.
+
+### Approved planned architecture and inactive integration
+
+- `config/launch-readiness.json` is the repository-side launch state of record and remains in `prelaunch` mode during this phase.
+- Formspree is the planned form provider. No account, form ID or endpoint is active or verified in this batch.
+- The unchecked required privacy acknowledgement is separate from marketing consent; no marketing consent is collected.
+- Planned form data is limited to: adult contact role, adult contact name, adult contact email, country, time zone or nearest city, learner first name, learner age group, selected program, preferred frequency, preferred availability, optional current learning level and goals, privacy acknowledgement record, the `_gotcha` honeypot, and provider-supplied technical submission metadata after activation.
+- An Adult woman learner must select the Adult woman group. A Parent or guardian must select a child age group; any mismatch receives an explanation rather than silent correction.
+- The planned programs are Quran, Dari/Persian, and Afghan Culture & Islamic Ethics. Culture & Islamic Ethics follows cohort availability and does not use private-plan prices.
+
+### Forbidden form data
+
+The trial form must not collect a child email or phone number, passport or identity document, exact date of birth, medical information or diagnoses, school name, home address, payment details, files, social-media handles, religious-confession declarations, marketing consent, WhatsApp number, financial information, government identifiers or passwords.
+
+### Production readiness flags and blockers
+
+- All external activation and verification flags remain false until independently confirmed.
+- Legal blockers: controller/operator name, suitable disclosure address, final legal bases, retention rules, provider/transfer disclosures, rights and complaint process, consumer withdrawal and refund treatment, taxes, applicable law, dispute process, effective date, and final Privacy and Terms approvals.
+- Form blockers: verified form-ID endpoint, verified notification destination, `salaam.center` domain restriction, spam protection, dummy success/error/network/duplicate tests, and success-marker verification.
+- Domain blockers: GitHub domain ownership verification, correct Pages repository/source, custom-domain configuration, current official DNS records, deliberate apex/www behavior, DNS propagation, HTTPS and redirect verification.
+- No deployment, GitHub Pages activation, CNAME, DNS change, domain connection, Formspree activation, analytics, payment integration or Search Console activation is authorized in this batch.

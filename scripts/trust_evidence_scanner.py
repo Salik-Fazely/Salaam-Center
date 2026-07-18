@@ -22,6 +22,7 @@ PUBLIC_HTML_PATHS = (
     "pricing/index.html",
     "about/index.html",
     "book-trial/index.html",
+    "contact/index.html",
     "privacy-policy/index.html",
     "terms/index.html",
     "success/index.html",
@@ -171,6 +172,11 @@ class _ClaimRule:
 
 _HTML_ONLY = frozenset({SurfaceType.HTML})
 _STRUCTURED_ONLY = frozenset({SurfaceType.STRUCTURED_DATA})
+_PRODUCTION_PLACEHOLDER_RE = re.compile(
+    r"FORM_ID|\bTBD\b|\bTODO\b|pre-launch|prelaunch|being prepared|not yet open|"
+    r"\bpending\b|not active yet|will only become active|not operationally verified",
+    re.IGNORECASE,
+)
 
 CLAIM_RULES = (
     _ClaimRule(
@@ -273,12 +279,85 @@ CLAIM_RULES = (
         ),
     ),
     _ClaimRule(
+        "unsupported legal identity",
+        "unapproved operator, company, or registration assertion",
+        re.compile(
+            r"\b(?:operated|owned|run)\s+by\s+[^.!?\n]{1,80}\b(?:Ltd|Limited|LLC|Inc(?:orporated)?|GmbH|S\.?\s*L\.?|Company|Corporation)\b|"
+            r"\bcompany\s+registration\s+(?:number|no\.?)\s*(?:is|:)\s*[A-Za-z0-9-]+|"
+            r"\b(?:legal\s+)?(?:operator|controller)\s*(?:is|:)\s+[^.!?\n]{2,100}",
+            re.IGNORECASE,
+        ),
+    ),
+    _ClaimRule(
+        "unsupported postal address",
+        "unapproved public postal or business address",
+        re.compile(
+            r"<address\b|"
+            r"\b(?:postal|business|registered|office|correspondence)\s+address\s*(?:is|:)\s*(?!pending\b|not\b)[^.!?\n]{2,120}|"
+            r"\b(?:P\.?\s*O\.?\s+Box\s+\d+|\d{1,6}\s+[A-Za-z][A-Za-z0-9 .'-]{1,60}\s(?:Street|St|Road|Rd|Avenue|Ave|Boulevard|Blvd|Lane|Ln|Drive|Dr|Calle|Plaza)\b)",
+            re.IGNORECASE,
+        ),
+    ),
+    _ClaimRule(
+        "unsupported postal address",
+        "unapproved structured postal address",
+        re.compile(
+            r"[\"'](?:address|streetAddress|postalCode|addressLocality|addressRegion|addressCountry)[\"']\s*:|"
+            r"[\"']PostalAddress[\"']",
+            re.IGNORECASE,
+        ),
+        _STRUCTURED_ONLY,
+    ),
+    _ClaimRule(
         "active form or contact destination",
         "form action or contact integration",
         re.compile(
-            r"(?:<form\b|\baction\s*=\s*['\"]?(?:https?:|mailto:|tel:)|"
-            r"(?:https?:)?//(?:wa\.me|api\.whatsapp\.com)/|\b(?:mailto:|tel:)|"
+            r"(?:<form\b(?![^>]*\bdata-prelaunch-disabled\s*=\s*['\"]true['\"])|"
+            r"\baction\s*=\s*['\"]?(?:https?:|mailto:|tel:)|"
+            r"(?:https?:)?//(?:wa\.me|api\.whatsapp\.com)/|"
+            r"\bmailto:(?!hello@salaam\.center(?:['\"\s>]|$))|\btel:|"
             r"https?://script\.google\.com/macros/)",
+            re.IGNORECASE,
+        ),
+    ),
+    _ClaimRule(
+        "unsafe form endpoint",
+        "Formspree placeholder, email-address endpoint, or non-form-ID endpoint",
+        re.compile(
+            r"http://formspree\.io/[^\s\"'<>]*|"
+            r"https://formspree\.io/(?!f/(?!FORM_ID(?=[\s\"'<>]|$))[A-Za-z0-9_-]{5,}(?=[\s\"'<>]|$))[^\s\"'<>]*",
+            re.IGNORECASE,
+        ),
+    ),
+    _ClaimRule(
+        "forbidden form field",
+        "child contact, sensitive, payment, upload, or marketing field",
+        re.compile(
+            r"\bname\s*=\s*['\"](?:child[_-]?(?:email|phone)|phone|telephone|mobile|"
+            r"date[_-]?of[_-]?birth|dob|passport|government[_-]?id|national[_-]?id|id[_-]?number|"
+            r"school[_-]?name|(?:home[_-]?)?address|payment|card[_-]?number|bank[_-]?account|"
+            r"financial(?:[_-]info)?|income|file|marketing(?:[_-]consent)?|"
+            r"newsletter(?:[_-]opt[_-]in)?|social(?:[_-](?:media|handle|account))?|"
+            r"religion|religious[_-]?confession|faith[_-]?declaration|password|whatsapp|medical|diagnosis)['\"]|"
+            r"\btype\s*=\s*['\"]file['\"]",
+            re.IGNORECASE,
+        ),
+    ),
+    _ClaimRule(
+        "pre-checked acknowledgement",
+        "privacy acknowledgement must be unchecked",
+        re.compile(
+            r"<input\b(?=[^>]*\bname\s*=\s*['\"]privacy_acknowledgement['\"])(?=[^>]*\bchecked\b)[^>]*>",
+            re.IGNORECASE,
+        ),
+        _HTML_ONLY,
+    ),
+    _ClaimRule(
+        "false submission confirmation",
+        "positive submission state outside the protected Success state",
+        re.compile(
+            r"\b(?:your trial request was submitted|Salaam Center has received the request|"
+            r"successfully submitted|we received your request)\b",
             re.IGNORECASE,
         ),
     ),
@@ -470,6 +549,12 @@ def _commercial_match_is_negated(
         end,
         question_safe=question_safe,
     )
+
+
+def _legal_match_is_negated(text: str, start: int, end: int) -> bool:
+    clause_start = max(text.rfind(mark, 0, start) for mark in (".", "!", "?", ";", "\n")) + 1
+    context = text[clause_start:end]
+    return re.search(r"\b(?:no|not|without|unapproved|unsupported)\b", context, re.IGNORECASE) is not None
 
 
 def _sanitize_excerpt(text: str) -> str:
@@ -672,6 +757,10 @@ def _virtual_rendered_claims(text: str) -> tuple[tuple[str, str], ...]:
                 question_safe=claim_rule.question_safe,
             ):
                 continue
+            if claim_rule.category in {"unsupported legal identity", "unsupported postal address"} and _legal_match_is_negated(
+                text, match.start(), match.end()
+            ):
+                continue
             claims.append(
                 (
                     claim_rule.category,
@@ -847,6 +936,10 @@ def scan_surface(surface: SurfaceText) -> tuple[Finding, ...]:
                 question_safe=claim_rule.question_safe,
             ):
                 continue
+            if claim_rule.category in {"unsupported legal identity", "unsupported postal address"} and _legal_match_is_negated(
+                masked_text, match.start(), match.end()
+            ):
+                continue
             results.append(
                 _finding_for_match(
                     surface,
@@ -888,7 +981,7 @@ def classify_path(
     referenced_scripts: Collection[Path] = (),
 ) -> Classification:
     relative = path.resolve().relative_to(root.resolve()).as_posix()
-    if relative in DOCUMENTATION_PATHS or relative == "tests" or relative.startswith("tests/"):
+    if relative in DOCUMENTATION_PATHS or relative == "docs" or relative.startswith("docs/") or relative == "tests" or relative.startswith("tests/"):
         return Classification.DOCUMENTATION_ONLY
     if relative in PUBLIC_HTML_PATHS or path.resolve() in {
         item.resolve() for item in referenced_scripts
@@ -976,10 +1069,14 @@ class _PublicHTMLParser(HTMLParser):
             and normalized_tag == self._evidence_card.tag
         ):
             self._evidence_card.depth += 1
-        elif self._evidence_card is None and normalized_tag in ("article", "section"):
+        elif self._evidence_card is None and normalized_tag in ("article", "section", "div"):
             attributes = {name.lower(): value or "" for name, value in attrs}
             classes = frozenset(attributes.get("class", "").split())
-            kind = next(
+            kind = "confirmed-success" if (
+                self._relative_path == "success/index.html"
+                and attributes.get("data-success-state") == "confirmed"
+                and "hidden" in attributes
+            ) else next(
                 (
                     value
                     for value in (
@@ -1033,6 +1130,13 @@ class _PublicHTMLParser(HTMLParser):
             )
             self.fragments.append(
                 (SurfaceType.HTML, line, f"<form {attributes}>".rstrip())
+            )
+        elif normalized_tag == "address" and not self._in_head:
+            attributes = " ".join(
+                f'{name}="{value}"' for name, value in attrs if value
+            )
+            self.fragments.append(
+                (SurfaceType.HTML, line, f"<address {attributes}>".rstrip())
             )
         elif not self._in_head:
             self._add_attributes(SurfaceType.HTML, attrs)
@@ -1186,6 +1290,15 @@ class _PublicHTMLParser(HTMLParser):
                 card.start,
                 end,
             )
+        elif card.kind == "confirmed-success" and self._relative_path == "success/index.html":
+            required = (
+                "Your trial request was submitted",
+                "Salaam Center has received the request.",
+                "No payment has been made.",
+            )
+            if all(value in card_text for value in required):
+                self.visible.protect(required[0], card.start, end)
+                self.visible.protect(required[1], card.start, end)
 
 
 def _resolve_local_script(root: Path, html_path: Path, source: str) -> Path | None:
@@ -1370,22 +1483,39 @@ def scan_repository(
         )
         for relative_path in sorted(DOCUMENTATION_PATHS)
     )
-    findings = tuple(
-        sorted(
-            (
-                finding
-                for surface in (*public_surfaces, *documentation_surfaces)
-                for finding in scan_surface(surface)
-            ),
-            key=lambda finding: (
-                finding.path.resolve().as_posix(),
-                finding.line,
-                finding.surface.value,
-                finding.category,
-                finding.rule,
-            ),
-        )
-    )
+    all_findings = [
+        finding
+        for surface in (*public_surfaces, *documentation_surfaces)
+        for finding in scan_surface(surface)
+    ]
+    config_path = root_path / "config/launch-readiness.json"
+    try:
+        production_mode = json.loads(config_path.read_text(encoding="utf-8")).get("site_mode") == "production"
+    except (FileNotFoundError, json.JSONDecodeError, AttributeError):
+        production_mode = False
+    if production_mode:
+        for surface in public_surfaces:
+            masked_text = _mask_protected_ranges(surface)
+            all_findings.extend(
+                _finding_for_match(
+                    surface,
+                    "production placeholder",
+                    "placeholder or prelaunch language in production-marked public content",
+                    match.start(),
+                    match.end(),
+                )
+                for match in _PRODUCTION_PLACEHOLDER_RE.finditer(masked_text)
+            )
+    findings = tuple(sorted(
+        all_findings,
+        key=lambda finding: (
+            finding.path.resolve().as_posix(),
+            finding.line,
+            finding.surface.value,
+            finding.category,
+            finding.rule,
+        ),
+    ))
     return ScanReport(
         public_surfaces=public_surfaces,
         public_html_paths=html_paths,

@@ -843,8 +843,87 @@ class ClaimRuleTests(unittest.TestCase):
             self.assertEqual(3, len(form_findings))
             self.assertEqual([1, 2, 3], [item.line for item in form_findings])
 
+    def test_explicitly_disabled_prelaunch_form_is_permitted(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "index.html").write_text(
+                '<form data-prelaunch-disabled="true" data-endpoint="">'
+                '<fieldset disabled><input name="email"></fieldset>'
+                '<button type="submit" disabled>Send</button></form>',
+                encoding="utf-8",
+            )
+            surfaces, _, _ = extract_public_surfaces(root, ("index.html",))
+            self.assertEqual((), tuple(
+                item for surface in surfaces for item in scan_surface(surface)
+                if item.category == "active form or contact destination"
+            ))
+
+    def test_launch_form_and_success_safety_rules_reject_unsafe_variants(self):
+        unsafe = (
+            ('<input name="child_email">', "forbidden form field"),
+            ('<input name="phone">', "forbidden form field"),
+            ('<input name="religious_confession">', "forbidden form field"),
+            ('<input name="social_handle">', "forbidden form field"),
+            ('<input name="financial_info">', "forbidden form field"),
+            ('<input name="password">', "forbidden form field"),
+            ('<input name="newsletter_opt_in">', "forbidden form field"),
+            ('<input name="privacy_acknowledgement" checked>', "pre-checked acknowledgement"),
+            ('<input checked name="privacy_acknowledgement">', "pre-checked acknowledgement"),
+            ('https://formspree.io/f/FORM_ID', "unsafe form endpoint"),
+            ('https://formspree.io/hello@example.test', "unsafe form endpoint"),
+            ('https://formspree.io/not-a-form', "unsafe form endpoint"),
+            ('Your trial request was submitted', "false submission confirmation"),
+        )
+        for value, category in unsafe:
+            with self.subTest(value=value):
+                self.assertIn(category, {item.category for item in findings(value)})
+        self.assertEqual((), findings('href="mailto:hello@salaam.center"'))
+
+    def test_unsupported_legal_identity_and_postal_address_are_rejected(self):
+        cases = (
+            ("Operated by Example Learning Ltd.", "unsupported legal identity"),
+            ("Company registration number: 123456", "unsupported legal identity"),
+            ("<address>17 Example Street</address>", "unsupported postal address"),
+        )
+        for value, category in cases:
+            with self.subTest(value=value):
+                self.assertIn(category, {item.category for item in html_findings(value, "index.html")})
+        structured = findings(
+            '{"@type":"PostalAddress","streetAddress":"17 Example Street"}',
+            SurfaceType.STRUCTURED_DATA,
+        )
+        self.assertIn("unsupported postal address", {item.category for item in structured})
+        safe = (
+            "Final controller identity and postal address remain pending. "
+            "No legal entity or postal address is asserted by this pre-launch notice."
+        )
+        self.assertFalse({
+            item.category for item in findings(safe)
+        } & {"unsupported legal identity", "unsupported postal address"})
+
 
 class RepositoryTrustEvidenceTests(unittest.TestCase):
+    def test_production_mode_rejects_placeholder_public_copy_only(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "docs").mkdir()
+            (root / "config").mkdir()
+            (root / "index.html").write_text("<main>Mailbox verification remains pending.</main>", encoding="utf-8")
+            for relative in (
+                "SALAM-CENTER-APPROVED-FACTS.md",
+                "MIGRATION-SOURCE.md",
+                "docs/COMMERCIAL-AND-ENROLMENT.md",
+            ):
+                (root / relative).write_text("Documentation fixture.", encoding="utf-8")
+            config = root / "config/launch-readiness.json"
+            config.write_text('{"site_mode":"production"}', encoding="utf-8")
+            report = scan_repository(root, ("index.html",))
+            self.assertIn("production placeholder", {item.category for item in report.failures})
+
+            config.write_text('{"site_mode":"prelaunch"}', encoding="utf-8")
+            report = scan_repository(root, ("index.html",))
+            self.assertNotIn("production placeholder", {item.category for item in report.failures})
+
     def test_linked_html_routes_require_an_explicit_manifest_decision(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)
@@ -899,6 +978,7 @@ class RepositoryTrustEvidenceTests(unittest.TestCase):
                 "pricing/index.html",
                 "about/index.html",
                 "book-trial/index.html",
+                "contact/index.html",
                 "privacy-policy/index.html",
                 "terms/index.html",
                 "success/index.html",
@@ -907,7 +987,7 @@ class RepositoryTrustEvidenceTests(unittest.TestCase):
             report.public_html_paths,
         )
         self.assertEqual(
-            (ROOT / "assets/js/main.js",),
+            (ROOT / "assets/js/main.js", ROOT / "assets/js/trial-form.js"),
             report.public_script_paths,
         )
         self.assertTrue(all(

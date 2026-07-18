@@ -66,7 +66,7 @@ class PricingPageTests(unittest.TestCase):
             page,
         )
         self.assertIn('<meta name="robots" content="noindex, nofollow" />', page)
-        self.assertNotRegex(page, r'<link\b[^>]*rel="canonical"')
+        self.assertIn('<link rel="canonical" href="https://salaam.center/pricing/" />', page)
         self.assertIn("Private lesson plans", text)
         self.assertIn("Simple plans for consistent learning", text)
         self.assertIn(
@@ -315,10 +315,12 @@ class EnrolmentJourneyTests(unittest.TestCase):
             "Plan selection",
             "Review terms and payment information",
             "Paid classes begin",
-            "Online trial booking is being prepared and is not yet open.",
+            "Secure online trial booking is being prepared and is not yet open.",
         ):
             self.assertIn(value, trial)
-        self.assertNotRegex(trial_page, r"<(?:form|input|select|textarea)\b")
+        self.assertIn('data-prelaunch-disabled="true"', trial_page)
+        self.assertIn('<fieldset disabled>', trial_page)
+        self.assertNotRegex(trial_page, r'<form\b[^>]+action=')
 
     def test_terms_privacy_and_success_remain_truthful_prelaunch_surfaces(self):
         terms = visible(source("terms/index.html"))
@@ -335,15 +337,16 @@ class EnrolmentJourneyTests(unittest.TestCase):
             "At least 24 hours’ notice",
             "Teacher cancellations are rescheduled",
             "Final validity",
-            "Refund and consumer-withdrawal terms remain pending legal and accounting review",
+            "Consumer withdrawal treatment",
+            "Final refund rules",
         ):
             self.assertIn(value, terms)
 
         privacy = visible(source("privacy-policy/index.html"))
-        self.assertIn("No pricing checkout is active.", privacy)
-        self.assertIn("No booking form is active.", privacy)
-        self.assertIn("No payment data is collected through this website.", privacy)
-        self.assertIn("No analytics is active.", privacy)
+        self.assertIn("No live booking submissions are accepted.", privacy)
+        self.assertIn("No payment collection is active.", privacy)
+        self.assertIn("No analytics are used.", privacy)
+        self.assertIn("No active Formspree endpoint is connected.", privacy)
 
         success = visible(source("success/index.html"))
         self.assertIn("No request has been submitted", success)
@@ -410,7 +413,7 @@ class CommercialDocumentationTests(unittest.TestCase):
             "Legal-entity information",
             "Final Terms and Conditions",
             "Final Privacy Policy",
-            "Contact details",
+            "Contact mailbox",
             "Live form and backend",
             "Analytics",
             "Production SEO",
