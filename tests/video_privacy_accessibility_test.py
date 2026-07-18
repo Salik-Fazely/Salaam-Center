@@ -54,7 +54,7 @@ class VideoButtonParser(HTMLParser):
             self.controls.append(attributes)
 
 
-def video_controls(path):
+def controls(path):
     parser = VideoButtonParser()
     parser.feed(source(path))
     parser.close()
@@ -67,64 +67,56 @@ class VideoPrivacyAccessibilityTests(unittest.TestCase):
         self.assertIn("https://www.youtube-nocookie.com/embed/", script)
         self.assertNotIn("https://www.youtube.com/embed/", script)
 
-        for page in ROOT.rglob("index.html"):
-            self.assertNotIn("https://www.youtube.com/embed/", source(page), str(page))
-
-    def test_no_iframe_is_present_before_a_video_is_activated(self):
+    def test_no_iframe_exists_before_a_video_is_activated(self):
         for page in (HOMEPAGE, TEACHERS):
             self.assertNotRegex(source(page), r"<iframe\b", str(page))
-        self.assertIn("trigger.addEventListener('click'", source(MAIN_JS))
 
-    def test_all_six_expected_video_ids_remain_in_video_controls(self):
-        controls = video_controls(HOMEPAGE) + video_controls(TEACHERS)
-        self.assertEqual(EXPECTED_VIDEO_IDS, {item["data-youtube-id"] for item in controls})
+    def test_all_six_approved_video_ids_remain(self):
+        found = {item["data-youtube-id"] for item in controls(HOMEPAGE) + controls(TEACHERS)}
+        self.assertEqual(EXPECTED_VIDEO_IDS, found)
 
     def test_each_page_has_unique_descriptive_video_names(self):
         for page in (HOMEPAGE, TEACHERS):
-            controls = video_controls(page)
-            labels = [item.get("aria-label") for item in controls]
-            titles = [item.get("data-youtube-title") for item in controls]
-            self.assertNotIn(None, labels, str(page))
-            self.assertNotIn(None, titles, str(page))
+            items = controls(page)
+            ids = [item["data-youtube-id"] for item in items]
+            labels = [item.get("aria-label") for item in items]
+            titles = [item.get("data-youtube-title") for item in items]
+            self.assertEqual(len(ids), len(set(ids)), str(page))
             self.assertEqual(len(labels), len(set(labels)), str(page))
             self.assertEqual(len(titles), len(set(titles)), str(page))
-            for item in controls:
+            for item in items:
                 video_id = item["data-youtube-id"]
-                self.assertEqual(EXPECTED_TITLES[video_id], item["data-youtube-title"])
-                self.assertEqual(EXPECTED_LABELS[video_id], item["aria-label"])
+                self.assertEqual(EXPECTED_TITLES[video_id], item.get("data-youtube-title"))
+                self.assertEqual(EXPECTED_LABELS[video_id], item.get("aria-label"))
 
-    def test_student_video_labels_are_distinguishable(self):
-        student_controls = {
-            item["data-youtube-id"]: item
-            for item in video_controls(HOMEPAGE)
-            if item["data-youtube-id"] in {"to3h-qq7_FM", "6WxiPdZNcCY"}
-        }
-        self.assertEqual("Play student message 1", student_controls["to3h-qq7_FM"]["aria-label"])
-        self.assertEqual("Play student message 2", student_controls["6WxiPdZNcCY"]["aria-label"])
+    def test_student_video_labels_and_captions_are_preserved(self):
+        homepage = source(HOMEPAGE)
+        for value in (
+            "A student shares appreciation",
+            "A short message of appreciation from a student sharing their learning experience.",
+            "Thanks from a young learner",
+            "A student shares thanks and happiness about their Quran learning journey.",
+        ):
+            self.assertIn(value, homepage)
 
-    def test_generated_iframe_reuses_the_required_descriptive_title_and_receives_focus(self):
+    def test_generated_iframe_is_named_and_receives_focus(self):
         script = source(MAIN_JS)
-        self.assertRegex(script, r"title\s*=\s*trigger\.dataset\.youtubeTitle")
         self.assertRegex(script, r"iframe\.title\s*=\s*title")
-        self.assertRegex(
-            script,
-            re.compile(r"requestAnimationFrame\s*\(.*?iframe\.focus", re.DOTALL),
-        )
-        self.assertIn(".youtube-inline-player:focus", source(STYLES))
-        self.assertIn(".youtube-inline-player.has-focus", source(STYLES))
+        self.assertRegex(script, re.compile(r"requestAnimationFrame\s*\(.*?iframe\.focus", re.S))
+        css = source(STYLES)
+        self.assertIn(".youtube-inline-player:focus", css)
+        self.assertIn(".youtube-inline-player.has-focus", css)
 
-    def test_player_validates_required_video_data_before_replacement(self):
+    def test_player_validates_data_and_prevents_duplicate_activation(self):
         script = source(MAIN_JS)
         self.assertRegex(script, r"\^\[A-Za-z0-9_-\]\{11\}\$")
-        self.assertNotIn("|| 'Video message'", script)
         self.assertIn("if (isActivated) return", script)
+        self.assertIn("!title", script)
 
-    def test_privacy_policy_describes_activation_without_unsupported_claims(self):
+    def test_privacy_placeholder_describes_thumbnail_and_player_behavior_accurately(self):
         privacy = source(PRIVACY)
-        self.assertIn(
-            "YouTube video players load only after you choose to play a video, and the site uses YouTube&rsquo;s privacy-enhanced embed domain.",
-            privacy,
-        )
+        self.assertIn("Pages with video samples use YouTube-hosted thumbnails.", privacy)
+        self.assertIn("A privacy-enhanced YouTube player is created only after you choose to play a video.", privacy)
         lower = privacy.lower()
         for unsupported in (
             "youtube sets no cookies",

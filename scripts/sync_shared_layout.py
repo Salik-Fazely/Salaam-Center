@@ -21,14 +21,23 @@ HEADER_FRAGMENTS = {
 }
 FOOTER_FRAGMENTS = {
     "standard": "partials/footer.html",
-    "no_prebooking_contact": "partials/footer-no-prebooking-contact.html",
 }
 
 NAV_PLACEHOLDERS = {
+    "home": "{{NAV_HOME_CURRENT}}",
+    "our_approach": "{{NAV_OUR_APPROACH_CURRENT}}",
+    "programs": "{{NAV_PROGRAMS_CURRENT}}",
     "how_it_works": "{{NAV_HOW_IT_WORKS_CURRENT}}",
     "teachers": "{{NAV_TEACHERS_CURRENT}}",
-    "pricing": "{{NAV_PRICING_CURRENT}}",
     "about": "{{NAV_ABOUT_CURRENT}}",
+}
+NAV_CURRENT_PATHS = {
+    "home": "index.html",
+    "our_approach": "our-approach/index.html",
+    "programs": "programs/index.html",
+    "teachers": "teachers/index.html",
+    "how_it_works": "how-it-works/index.html",
+    "about": "about/index.html",
 }
 VALID_NAV_KEYS = {None, *NAV_PLACEHOLDERS}
 UNRESOLVED_PLACEHOLDER = re.compile(r"{{[^{}]+}}")
@@ -46,45 +55,22 @@ class PageConfig:
 
 PAGE_CONFIGS = (
     PageConfig("404.html", None),
-    PageConfig("index.html", None),
-    PageConfig("about/index.html", "about"),
-    PageConfig("blog/index.html", None),
+    PageConfig("index.html", "home"),
+    PageConfig("our-approach/index.html", "our_approach"),
+    PageConfig("programs/index.html", "programs"),
+    PageConfig("programs/quran/index.html", "programs"),
+    PageConfig("programs/dari-persian/index.html", "programs"),
     PageConfig(
-        "blog/free-online-quran-trial-lesson-parent-checklist/index.html",
-        None,
-        footer_variant="no_prebooking_contact",
-    ),
-    PageConfig(
-        "blog/help-children-memorize-short-surahs/index.html",
-        None,
-        footer_variant="no_prebooking_contact",
-    ),
-    PageConfig(
-        "blog/how-parents-can-track-their-childs-quran-progress/index.html",
-        None,
-        footer_variant="no_prebooking_contact",
-    ),
-    PageConfig(
-        "blog/one-to-one-quran-classes-vs-group-classes-for-children/index.html",
-        None,
-        footer_variant="no_prebooking_contact",
-    ),
-    PageConfig(
-        "blog/online-quran-classes-for-kids-parents-look-for/index.html",
-        None,
-        footer_variant="no_prebooking_contact",
-    ),
-    PageConfig("book-trial/index.html", None),
-    PageConfig("how-it-works/index.html", "how_it_works"),
-    PageConfig("pricing/index.html", "pricing"),
-    PageConfig("privacy-policy/index.html", None),
-    PageConfig(
-        "success/index.html",
-        None,
-        footer_variant="no_prebooking_contact",
+        "programs/afghan-culture-islamic-ethics/index.html",
+        "programs",
     ),
     PageConfig("teachers/index.html", "teachers"),
+    PageConfig("how-it-works/index.html", "how_it_works"),
+    PageConfig("about/index.html", "about"),
+    PageConfig("book-trial/index.html", None),
+    PageConfig("privacy-policy/index.html", None),
     PageConfig("terms/index.html", None),
+    PageConfig("success/index.html", None),
 )
 
 
@@ -150,7 +136,9 @@ def render_header(root: Path, config: PageConfig) -> str:
     for nav_key, placeholder in NAV_PLACEHOLDERS.items():
         attributes = ' class="nav__link"'
         if config.active_nav == nav_key:
-            attributes = ' class="nav__link is-active" aria-current="page"'
+            attributes = ' class="nav__link is-active"'
+            if NAV_CURRENT_PATHS.get(nav_key) == config.path:
+                attributes += ' aria-current="page"'
         rendered = rendered.replace(placeholder, attributes)
 
     ensure_resolved(rendered, relative_path)

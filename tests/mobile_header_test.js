@@ -129,12 +129,12 @@ function createFixture({ mobile = true } = {}) {
     ...windowTarget,
     location: {
       pathname: '/',
-      href: 'https://www.tarteelhouse.com/',
-      origin: 'https://www.tarteelhouse.com',
+      href: 'https://local.test/',
+      origin: 'https://local.test',
       replace() {},
     },
     matchMedia(query) {
-      if (query === '(max-width: 767px)') return mobileQuery;
+      if (query === '(max-width: 1023px)') return mobileQuery;
       return { matches: true, addEventListener() {} };
     },
   };
@@ -149,6 +149,8 @@ function createFixture({ mobile = true } = {}) {
 test('mobile menu initializes closed and unavailable to focus or assistive technology', () => {
   const { navMenu, navToggle } = createFixture();
 
+  assert.equal(navMenu.classList.contains('is-enhanced'), true);
+  assert.equal(navToggle.classList.contains('is-enhanced'), true);
   assert.equal(navToggle.getAttribute('aria-expanded'), 'false');
   assert.equal(navToggle.getAttribute('aria-label'), 'Open navigation menu');
   assert.equal(navMenu.hidden, true);

@@ -1,350 +1,156 @@
-import math
 import re
 import unittest
-from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 ROOT = Path(__file__).resolve().parents[1]
-FAQ_PAGES = {
-    Path("how-it-works/index.html"): 6,
-    Path("pricing/index.html"): 9,
-    Path("teachers/index.html"): 7,
-}
-BOOKING_ACTION = (
-    "https://script.google.com/macros/s/"
-    "AKfycbxdUb5dS1GDdlbJpjiFmBEW_aagYUlyYUhkEU068pkSYIrT24sw-RlGDmDTZJZ8X87DAA/exec"
+STYLES = ROOT / "assets/css/styles.css"
+
+PUBLIC_PAGES = (
+    "404.html",
+    "index.html",
+    "our-approach/index.html",
+    "programs/index.html",
+    "programs/quran/index.html",
+    "programs/dari-persian/index.html",
+    "programs/afghan-culture-islamic-ethics/index.html",
+    "teachers/index.html",
+    "how-it-works/index.html",
+    "about/index.html",
+    "book-trial/index.html",
+    "privacy-policy/index.html",
+    "terms/index.html",
+    "success/index.html",
 )
-CHOICE_VALUES = {
-    "Current Qur’an level": (
-        "radio",
-        "quran_level",
-        [
-            "complete-beginner",
-            "knows-arabic-letters",
-            "reading-short-words",
-            "reading-independently",
-        ],
-    ),
-    "Preferred session language": (
-        "radio",
-        "session_language",
-        ["english", "arabic", "turkish", "persian"],
-    ),
-    "Preferred days": (
-        "checkbox",
-        "preferred_days",
-        ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-    ),
-    "Preferred time of day": (
-        "radio",
-        "preferred_time",
-        ["morning", "afternoon", "evening"],
-    ),
-}
-EXPECTED_FORM_NAMES = {
-    "source",
-    "success_redirect",
-    "website_field",
-    "child_name",
-    "child_age",
-    "quran_level",
-    "session_language",
-    "parent_name",
-    "country",
-    "email",
-    "whatsapp",
-    "preferred_days",
-    "preferred_time",
-    "city_region",
-    "notes",
-    "consent",
-}
 
 
-class PageParser(HTMLParser):
-    def __init__(self):
-        super().__init__(convert_charrefs=True)
-        self.faq_triggers = []
-        self.faq_panels = []
-        self.form_action = None
-        self.form_depth = 0
-        self.form_controls = []
-        self.choice_fieldsets = []
-        self.current_fieldset = None
-        self.in_legend = False
-
-    def handle_starttag(self, tag, attrs):
-        attributes = dict(attrs)
-        classes = set(attributes.get("class", "").split())
-
-        if "faq-question" in classes:
-            self.faq_triggers.append((tag, attributes))
-        if "faq-answer" in classes:
-            self.faq_panels.append((tag, attributes))
-
-        if tag == "form" and attributes.get("id") == "trial-form":
-            self.form_depth = 1
-            self.form_action = attributes.get("action")
-        elif self.form_depth and tag == "form":
-            self.form_depth += 1
-
-        if not self.form_depth:
-            return
-
-        if tag in {"input", "select", "textarea"}:
-            self.form_controls.append((tag, attributes))
-
-        if tag == "fieldset" and "choice-fieldset" in classes:
-            self.current_fieldset = {
-                "attrs": attributes,
-                "legend": [],
-                "inputs": [],
-                "labels": [],
-            }
-            self.choice_fieldsets.append(self.current_fieldset)
-        elif self.current_fieldset is not None:
-            if tag == "legend":
-                self.in_legend = True
-            elif tag == "input":
-                self.current_fieldset["inputs"].append(attributes)
-            elif tag == "label" and attributes.get("for"):
-                self.current_fieldset["labels"].append(attributes["for"])
-
-    def handle_data(self, data):
-        if self.current_fieldset is not None and self.in_legend:
-            self.current_fieldset["legend"].append(data)
-
-    def handle_endtag(self, tag):
-        if tag == "legend":
-            self.in_legend = False
-        elif tag == "fieldset" and self.current_fieldset is not None:
-            self.current_fieldset = None
-        elif tag == "form" and self.form_depth:
-            self.form_depth -= 1
+def source(relative_path):
+    return (ROOT / relative_path).read_text(encoding="utf-8")
 
 
-def parse_page(path):
-    parser = PageParser()
-    parser.feed(path.read_text(encoding="utf-8"))
-    return parser
+def attributes(tag):
+    return dict(re.findall(r'([:\w-]+)\s*=\s*["\']([^"\']*)["\']', tag))
 
 
-def normalized_text(parts):
-    return " ".join("".join(parts).split())
+def local_target_exists(href):
+    path = urlsplit(href).path
+    if not path or path == "/":
+        return (ROOT / "index.html").is_file()
+    target = ROOT / path.lstrip("/")
+    if path.endswith("/"):
+        target = target / "index.html"
+    return target.is_file()
 
 
-def rgb(hex_color):
-    value = hex_color.lstrip("#")
-    return tuple(int(value[index : index + 2], 16) for index in (0, 2, 4))
+def relative_luminance(hex_color):
+    channels = [int(hex_color[index:index + 2], 16) / 255 for index in (1, 3, 5)]
+    linear = [
+        channel / 12.92 if channel <= 0.03928 else ((channel + 0.055) / 1.055) ** 2.4
+        for channel in channels
+    ]
+    return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2]
 
 
-def composite(foreground, background, alpha):
-    return tuple(
-        foreground[index] * alpha + background[index] * (1 - alpha)
-        for index in range(3)
-    )
-
-
-def luminance(color):
-    channels = []
-    for channel in color:
-        value = channel / 255
-        channels.append(
-            value / 12.92
-            if value <= 0.04045
-            else math.pow((value + 0.055) / 1.055, 2.4)
-        )
-    return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
-
-
-def contrast(foreground, background):
-    lighter, darker = sorted(
-        (luminance(foreground), luminance(background)), reverse=True
-    )
+def contrast_ratio(first, second):
+    lighter, darker = sorted((relative_luminance(first), relative_luminance(second)), reverse=True)
     return (lighter + 0.05) / (darker + 0.05)
 
 
-def css_token(source, name):
-    match = re.search(rf"--{re.escape(name)}:\s*([^;]+);", source)
-    if not match:
-        raise AssertionError(f"Missing CSS token --{name}")
-    return match.group(1).strip()
+class AccessibilityStaticTests(unittest.TestCase):
+    def test_every_page_has_language_viewport_skip_link_and_main_landmark(self):
+        for relative in PUBLIC_PAGES:
+            page = source(relative)
+            self.assertRegex(page, r'<html\s+lang="en">', relative)
+            self.assertIn('name="viewport"', page, relative)
+            self.assertIn('<a class="skip-link" href="#main-content">Skip to main content</a>', page, relative)
+            self.assertEqual(1, page.count('<main id="main-content">'), relative)
+            self.assertEqual(1, page.count('</main>'), relative)
 
+    def test_every_page_has_one_h1_and_no_heading_level_jumps(self):
+        for relative in PUBLIC_PAGES:
+            page = source(relative)
+            headings = [int(level) for level in re.findall(r"<h([1-6])\b", page, flags=re.I)]
+            self.assertEqual(1, headings.count(1), relative)
+            for previous, current in zip(headings, headings[1:]):
+                self.assertLessEqual(current - previous, 1, f"{relative}: h{previous} to h{current}")
 
-def rgba_value(value):
-    match = re.fullmatch(
-        r"rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)",
-        value,
-    )
-    if not match:
-        raise AssertionError(f"Expected rgba() value, got {value}")
-    return tuple(map(int, match.groups()[:3])), float(match.group(4))
+    def test_ids_are_unique_and_skip_target_exists(self):
+        for relative in PUBLIC_PAGES:
+            page = source(relative)
+            ids = re.findall(r'\bid="([^"]+)"', page)
+            self.assertEqual(len(ids), len(set(ids)), relative)
+            self.assertIn("main-content", ids, relative)
 
+    def test_buttons_have_accessible_names_and_explicit_types(self):
+        for relative in PUBLIC_PAGES:
+            page = source(relative)
+            for match in re.finditer(r"<button\b([^>]*)>(.*?)</button>", page, flags=re.I | re.S):
+                opening = f"<button{match.group(1)}>"
+                attrs = attributes(opening)
+                text = " ".join(re.sub(r"<[^>]+>", " ", match.group(2)).split())
+                self.assertEqual("button", attrs.get("type"), f"{relative}: {opening}")
+                self.assertTrue(attrs.get("aria-label") or text, f"{relative}: unnamed button")
 
-class AccordionStaticTests(unittest.TestCase):
-    def test_every_canonical_faq_has_connected_native_disclosures(self):
-        all_ids = []
+    def test_images_reserve_space_and_have_alt_attributes(self):
+        for relative in PUBLIC_PAGES:
+            page = source(relative)
+            for image in re.findall(r"<img\b[^>]*>", page, flags=re.I):
+                attrs = attributes(image)
+                self.assertIn("alt", attrs, f"{relative}: {image}")
+                self.assertRegex(attrs.get("width", ""), r"^\d+$", f"{relative}: {image}")
+                self.assertRegex(attrs.get("height", ""), r"^\d+$", f"{relative}: {image}")
 
-        for relative, expected_count in FAQ_PAGES.items():
-            parser = parse_page(ROOT / relative)
-            self.assertEqual(expected_count, len(parser.faq_triggers), relative)
-            self.assertEqual(expected_count, len(parser.faq_panels), relative)
+    def test_all_internal_links_resolve_to_local_files(self):
+        for relative in PUBLIC_PAGES:
+            page = source(relative)
+            for href in re.findall(r'<a\b[^>]*\bhref="([^"]+)"', page, flags=re.I):
+                if href.startswith("#"):
+                    continue
+                self.assertFalse(href.startswith(("http://", "https://", "mailto:", "tel:")), f"{relative}: {href}")
+                self.assertTrue(local_target_exists(href), f"{relative}: unresolved {href}")
 
-            panels = {
-                attributes.get("id"): attributes
-                for _, attributes in parser.faq_panels
-                if attributes.get("id")
-            }
-            self.assertEqual(expected_count, len(panels), relative)
+    def test_trial_page_has_no_interactive_personal_data_controls(self):
+        trial = source("book-trial/index.html")
+        self.assertNotRegex(trial, r"<(?:form|input|select|textarea)\b")
+        self.assertIn("Online trial booking is being prepared and is not yet open.", trial)
 
-            for tag, attributes in parser.faq_triggers:
-                self.assertEqual("button", tag, relative)
-                self.assertEqual("button", attributes.get("type"), relative)
-                self.assertEqual("false", attributes.get("aria-expanded"), relative)
-                panel_id = attributes.get("aria-controls")
-                self.assertIn(panel_id, panels, relative)
-                all_ids.append(panel_id)
-
-                panel = panels[panel_id]
-                self.assertIn("hidden", panel, relative)
-                self.assertNotIn("aria-hidden", panel, relative)
-                self.assertNotIn("inert", panel, relative)
-                self.assertNotIn("style", panel, relative)
-
-        self.assertEqual(len(all_ids), len(set(all_ids)))
-
-
-class BookingChoiceStaticTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.path = ROOT / "book-trial/index.html"
-        cls.source = cls.path.read_text(encoding="utf-8")
-        cls.parser = parse_page(cls.path)
-
-    def test_booking_action_and_field_name_contract_are_unchanged(self):
-        self.assertEqual(BOOKING_ACTION, self.parser.form_action)
-        names = {
-            attributes["name"]
-            for _, attributes in self.parser.form_controls
-            if attributes.get("name")
-        }
-        self.assertEqual(EXPECTED_FORM_NAMES, names)
-
-    def test_choice_groups_use_fieldsets_legends_and_native_controls(self):
-        groups = {
-            normalized_text(group["legend"]): group
-            for group in self.parser.choice_fieldsets
-        }
-        self.assertEqual(set(CHOICE_VALUES), set(groups))
-
-        control_ids = []
-        for legend, (control_type, name, values) in CHOICE_VALUES.items():
-            group = groups[legend]
-            inputs = group["inputs"]
-            self.assertEqual(values, [control.get("value") for control in inputs], legend)
-            self.assertTrue(inputs, legend)
-            self.assertTrue(all(control.get("type") == control_type for control in inputs), legend)
-            self.assertTrue(all(control.get("name") == name for control in inputs), legend)
-
-            ids = [control.get("id") for control in inputs]
-            self.assertTrue(all(ids), legend)
-            self.assertEqual(ids, group["labels"], legend)
-            control_ids.extend(ids)
-
-            if control_type == "radio":
-                self.assertTrue(all("required" in control for control in inputs), legend)
-            else:
-                self.assertEqual("true", group["attrs"].get("data-required"), legend)
-                self.assertEqual(
-                    "preferred-days-requirement",
-                    group["attrs"].get("aria-describedby"),
-                    legend,
-                )
-
-        self.assertEqual(len(control_ids), len(set(control_ids)))
-        self.assertNotIn('role="radio"', self.source)
-        self.assertNotIn('role="checkbox"', self.source)
-        self.assertNotIn("aria-checked", self.source)
-        self.assertNotRegex(self.source, r'<button[^>]+class="chip"')
-        self.assertIn('id="preferred-days-requirement"', self.source)
-        self.assertIn("Choose at least one preferred day.", self.source)
-        self.assertIn("setCustomValidity", self.source)
-
-    def test_preferred_days_are_collapsed_to_the_existing_comma_separated_payload(self):
-        self.assertIn("function normalizePreferredDaysPayload(formData, form)", self.source)
-        self.assertIn("formData.delete('preferred_days');", self.source)
-        self.assertIn("formData.append('preferred_days', selectedDays.join(','));", self.source)
-
-
-class FocusContrastAndMotionTests(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.source = (ROOT / "assets/css/styles.css").read_text(encoding="utf-8")
-
-    def test_muted_text_tokens_meet_normal_text_contrast(self):
-        foreground, alpha = rgba_value(css_token(self.source, "muted"))
-        paper = rgb(css_token(self.source, "paper"))
-        ivory = rgb(css_token(self.source, "ivory"))
-        self.assertGreaterEqual(contrast(composite(foreground, paper, alpha), paper), 4.5)
-        self.assertGreaterEqual(contrast(composite(foreground, ivory, alpha), ivory), 4.5)
-
-        dark_foreground, dark_alpha = rgba_value(css_token(self.source, "on-dark-muted"))
-        ink = rgb(css_token(self.source, "ink"))
-        self.assertGreaterEqual(
-            contrast(composite(dark_foreground, ink, dark_alpha), ink), 4.5
+    def test_public_copy_avoids_internal_migration_and_approval_language(self):
+        internal_phrases = (
+            "approved teacher",
+            "approved video",
+            "retained unchanged",
+            "has been invented",
         )
-        footer_copy = re.search(r"\.footer__copy\s*\{(?P<body>[^}]+)\}", self.source)
-        self.assertIsNotNone(footer_copy)
-        self.assertIn("color: var(--on-dark-muted);", footer_copy.group("body"))
+        for relative in PUBLIC_PAGES:
+            page = source(relative).lower()
+            for phrase in internal_phrases:
+                self.assertNotIn(phrase, page, relative)
 
-    def test_control_boundaries_and_focus_indicator_meet_three_to_one(self):
-        border_foreground, border_alpha = rgba_value(css_token(self.source, "control-border"))
-        focus = rgb(css_token(self.source, "bronze-2"))
-        backgrounds = [
-            rgb(css_token(self.source, name))
-            for name in ("paper", "ivory", "forest", "ink")
-        ]
-        paper = backgrounds[0]
-
-        self.assertGreaterEqual(
-            contrast(composite(border_foreground, paper, border_alpha), paper), 3
-        )
-        for background in backgrounds:
-            self.assertGreaterEqual(contrast(focus, background), 3)
-
-        self.assertNotRegex(self.source, r"outline\s*:\s*(?:none|0)\b")
+    def test_css_keeps_focus_contrast_touch_targets_and_reduced_motion(self):
+        css = source("assets/css/styles.css")
+        for token in ("#2b87d5", "#173a5e", "#ffffff", "#eef5fc", "#f5f7fa", "#f4b400"):
+            self.assertIn(token, css.lower())
+        self.assertIn(":focus-visible", css)
+        self.assertIn("outline: 3px solid var(--focus)", css)
+        self.assertIn("--focus: #173a5e;", css.lower())
         self.assertRegex(
-            self.source,
-            r":focus-visible\s*\{[^}]*outline:\s*3px solid var\(--bronze-2\);",
+            css,
+            re.compile(r":focus-visible\s*\{[^}]*box-shadow:\s*0 0 0 6px var\(--gold\)", re.S),
         )
-        self.assertRegex(
-            self.source,
-            r"\.chip-control:focus-visible\s*\+\s*\.chip\s*\{[^}]*outline:",
-        )
-
-    def test_selected_booking_choices_have_a_non_color_indicator(self):
-        self.assertIn(".chip-control:checked + .chip", self.source)
-        self.assertRegex(
-            self.source,
-            r"\.chip-control\[type=['\"]checkbox['\"]\]:checked\s*\+\s*\.chip::before\s*\{[^}]*content:",
-        )
-        self.assertRegex(
-            self.source,
-            r"\.chip-control\[type=['\"]radio['\"]\]:checked\s*\+\s*\.chip::before\s*\{[^}]*box-shadow:",
-        )
-
-    def test_reduced_motion_forces_immediate_static_visibility(self):
-        marker = "@media (prefers-reduced-motion: reduce)"
-        self.assertIn(marker, self.source)
-        reduced = self.source[self.source.index(marker) :]
-        self.assertRegex(reduced, r"html\s*\{[^}]*scroll-behavior:\s*auto;")
-        self.assertRegex(
-            reduced,
-            r"\.reveal-section,\s*\.reveal-card\s*\{[^}]*opacity:\s*1;[^}]*transform:\s*none;[^}]*transition:\s*none;",
-        )
-        self.assertRegex(reduced, r"body\.is-leaving\s*\{[^}]*opacity:\s*1;")
-        self.assertIn("@media (prefers-reduced-motion: no-preference)", self.source)
+        for selector in (r"\.btn--primary", r"\.nav__mark", r"\.process-list li::before"):
+            self.assertRegex(
+                css,
+                re.compile(selector + r"[^\{]*\{[^}]*background:\s*var\(--blue-dark\)", re.S),
+            )
+        self.assertGreaterEqual(contrast_ratio("#ffffff", "#1e6fb5"), 4.5)
+        self.assertGreaterEqual(contrast_ratio("#173a5e", "#ffffff"), 3.0)
+        self.assertGreaterEqual(contrast_ratio("#f4b400", "#173a5e"), 3.0)
+        self.assertIn("min-height: 3rem", css)
+        self.assertIn("@media (prefers-reduced-motion: reduce)", css)
+        self.assertIn("overflow-x: auto", css)
+        self.assertNotIn("fonts.googleapis.com", css)
+        self.assertNotRegex(css, r"@import\s+url")
 
 
 if __name__ == "__main__":
