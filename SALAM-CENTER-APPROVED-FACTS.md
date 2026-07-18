@@ -152,15 +152,50 @@ Pricing for Afghan Culture & Islamic Ethics group classes will be published when
 - Progress summary every four weeks: for a minor, it is shared with the parent or guardian; an adult learner receives it directly. It may cover attendance, areas practised, teacher observations and suggested next steps without promising formal assessment or outcomes.
 - Refund and consumer-withdrawal terms remain pending legal and accounting review and must be shown before payment.
 
+## Approved internal teacher compensation — not approved for public use
+
+This is internal business information and is not approved for public use. Teacher compensation is €1.50 for each eligible 40-minute lesson.
+
+Eligible compensation events are:
+
+- a completed paid private lesson;
+- a completed free trial lesson;
+- a learner late cancellation or no-show when the class is treated as used, provided the teacher was present and available to teach.
+
+Compensation is not added when the teacher cancels, the same class is later delivered as a replacement, a class was never scheduled, the teacher was unavailable, or a teacher-caused technical problem requires the class to be repeated. A teacher-cancelled class is compensated only when its replacement is delivered; the original cancellation and replacement are not both paid.
+
+Each completed free 40-minute trial costs Salaam Center €1.50 in direct teacher compensation. This is a separate acquisition cost outside the paid-class calculations, and the trial remains free to the learner.
+
+### Direct teacher-cost economics
+
+“Teacher-cost contribution” means plan revenue less direct teacher compensation for the plan's scheduled paid classes. It is not final profit or net profit.
+
+| Plan | Frequency | Revenue | Paid classes | Teacher cost | Teacher-cost contribution | Teacher-cost contribution margin |
+|---|---|---:|---:|---:|---:|---:|
+| Flexible 4-week | 1 class per week | €49 | 4 | €6 | €43 | 87.76% |
+| Flexible 4-week | 2 classes per week | €69 | 8 | €12 | €57 | 82.61% |
+| Flexible 4-week | 4 classes per week | €99 | 16 | €24 | €75 | 75.76% |
+| 12-week | 1 class per week | €119 | 12 | €18 | €101 | 84.87% |
+| 12-week | 2 classes per week | €129 | 24 | €36 | €93 | 72.09% |
+| 12-week | 4 classes per week | €229 | 48 | €72 | €157 | 68.56% |
+
+At the approved teacher compensation of €1.50 per eligible 40-minute lesson, all six approved private plans have positive and currently acceptable direct teacher-cost contribution. The lowest direct contribution margin is 68.56% before payment fees, taxes, administration, marketing and other operating costs.
+
+Teacher compensation, teacher cost per lesson, internal revenue per lesson, teacher-cost contribution, contribution margins, profitability calculations and this compensation policy must not be published in public HTML, metadata, structured data, navigation or executable JavaScript.
+
 ## Internal deployment blockers
 
 The pricing page may exist in the noindex pre-launch website, but none of the following is approved as complete for production use:
 
-- **Teacher compensation review** — unresolved internal commercial review
-- **Gross-margin review** — unresolved until teacher compensation, fees, tax and administrative costs are known
-- **Payment-provider selection** — unresolved; no provider may be named or activated
+- **Teacher-compensation review** — resolved for current pre-launch pricing at €1.50 per eligible 40-minute lesson
+- **Gross-margin review** — direct teacher-cost contribution is recorded, but the final minimum net-margin policy remains unresolved
+- **Payment-provider selection and fees** — unresolved; no provider may be named or activated
 - **Tax and accounting review** — unresolved, including tax treatment and price presentation
 - **Refund and consumer-law review** — unresolved for the legal entity, customer locations, payment method and service start
+- **Administrative cost** — unresolved
+- **Marketing and acquisition cost** — unresolved
+- **Refund and chargeback exposure** — unresolved
+- **Future teacher-rate changes** — require a new economics review before pricing or compensation changes
 - **Legal-entity information** — unresolved
 - **Final Terms and Conditions** — unresolved and not approved for public contractual use
 - **Final Privacy Policy** — unresolved and not approved as a final legal policy
@@ -170,7 +205,7 @@ The pricing page may exist in the noindex pre-launch website, but none of the fo
 - **Production SEO** — unresolved; all pages remain noindex and without production canonicals
 - **Deployment approval** — unresolved; no publishing, Pages, domain or DNS action is authorized
 
-Teacher compensation, payment fees, applicable taxes, administrative cost and minimum acceptable gross margin must be reviewed before the pricing page is approved for production deployment.
+Teacher-compensation review is resolved for current pre-launch pricing. Production approval still requires review of payment-provider fees, tax and accounting treatment, administrative cost, marketing and acquisition cost, refund and chargeback exposure, consumer law and the final minimum net-margin policy.
 
 ### Internal inherited-claim audit — not approved for public use
 

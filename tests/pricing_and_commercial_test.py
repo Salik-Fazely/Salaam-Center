@@ -393,16 +393,20 @@ class CommercialDocumentationTests(unittest.TestCase):
             self.assertIn(f"€{price} ÷ {classes} = €{expected} per paid class", document)
         for value in ("19.0%", "37.7%", "22.9%"):
             self.assertIn(value, document)
-        self.assertIn(
-            "Teacher compensation, payment fees, applicable taxes, administrative cost and minimum acceptable gross margin must be reviewed before the pricing page is approved for production deployment.",
-            document,
-        )
+        self.assertIn("Teacher-compensation review", document)
+        self.assertIn("resolved for current pre-launch pricing", document)
+        self.assertIn("Final minimum net-margin policy", document)
         for blocker in (
-            "Teacher compensation review",
+            "Teacher-compensation review",
             "Gross-margin review",
             "Payment-provider selection",
-            "Tax and accounting review",
-            "Refund and consumer-law review",
+            "Payment-provider fees",
+            "Tax and accounting treatment",
+            "Administrative cost",
+            "Marketing and acquisition cost",
+            "Refund and chargeback exposure",
+            "Consumer-law review",
+            "Future teacher-rate changes",
             "Legal-entity information",
             "Final Terms and Conditions",
             "Final Privacy Policy",

@@ -165,17 +165,42 @@ Refund and consumer-withdrawal rules are pending legal and accounting review bef
 
 The public Terms page is a non-contractual pre-launch summary. Complete contractual terms must be presented before payment is accepted. The Privacy page is not a final legal policy.
 
+## Internal teacher-compensation operations
+
+This section is internal business information and is not approved for public use. Teacher compensation is €1.50 for each eligible 40-minute lesson.
+
+### Eligible events
+
+- Completed paid private lessons are eligible.
+- Completed free trial lessons are eligible.
+- A learner late cancellation or no-show that is treated as used is eligible when the teacher was present and available to teach.
+
+The teacher's presence and availability must be recorded operationally before a learner absence is treated as an eligible compensation event.
+
+### Ineligible events and replacements
+
+- A teacher-cancelled class is not compensated at cancellation.
+- Compensation attaches to the replacement class when that replacement is delivered.
+- The original and replacement are not both paid.
+- A class that was never scheduled is not eligible.
+- Teacher unavailability is not eligible.
+- A teacher-caused technical problem that requires a repeat is not eligible for an additional payment.
+
+The €1.50 teacher payment, teacher cost per lesson, contribution calculations, internal revenue per lesson, profitability calculations and this compensation policy must not appear in public HTML, metadata, structured data, navigation or publicly referenced JavaScript.
+
 ## Internal-only unit economics
 
-This section is internal, unsupported as a public value claim and not approved for public use. It records effective revenue before teacher compensation, provider fees, tax, administration or other costs.
+This section is internal business information and is not approved for public use. “Teacher-cost contribution” means plan revenue less direct teacher compensation for the plan's scheduled paid classes. Teacher-cost contribution is not final profit or net profit.
 
-### Flexible 4-week plans
+### Effective revenue per paid class
+
+#### Flexible 4-week plans
 
 - €49 ÷ 4 = €12.25 per paid class
 - €69 ÷ 8 = €8.63 per paid class, rounded
 - €99 ÷ 16 = €6.19 per paid class, rounded
 
-### 12-week plans
+#### 12-week plans
 
 - €119 ÷ 12 = €9.92 per paid class, rounded
 - €129 ÷ 24 = €5.38 per paid class, rounded
@@ -183,17 +208,51 @@ This section is internal, unsupported as a public value claim and not approved f
 
 Internal percentage comparisons against three consecutive 4-week plans are approximately 19.0%, 37.7% and 22.9%. These are documentation-only calculations, not approved public discount badges.
 
-Teacher compensation, payment fees, applicable taxes, administrative cost and minimum acceptable gross margin must be reviewed before the pricing page is approved for production deployment.
+### Direct teacher-cost contribution by plan
 
-No profit or gross margin can be calculated responsibly until teacher-cost and related cost data are approved.
+| Plan | Frequency | Revenue | Paid classes | Teacher cost | Teacher-cost contribution | Teacher-cost contribution margin |
+|---|---|---:|---:|---:|---:|---:|
+| Flexible 4-week | 1 class per week | €49 | 4 | €6 | €43 | 87.76% |
+| Flexible 4-week | 2 classes per week | €69 | 8 | €12 | €57 | 82.61% |
+| Flexible 4-week | 4 classes per week | €99 | 16 | €24 | €75 | 75.76% |
+| 12-week | 1 class per week | €119 | 12 | €18 | €101 | 84.87% |
+| 12-week | 2 classes per week | €129 | 24 | €36 | €93 | 72.09% |
+| 12-week | 4 classes per week | €229 | 48 | €72 | €157 | 68.56% |
+
+These calculations exclude:
+
+- Payment-provider fees
+- Taxes
+- Accounting costs
+- Administrative work
+- Marketing costs
+- Refunds or chargebacks
+- Content-production costs
+- Software or service costs
+- The separate €1.50 acquisition cost of the free trial
+
+### Free-trial acquisition cost
+
+Each completed free 40-minute trial costs Salaam Center €1.50 in direct teacher compensation. This is a separate acquisition cost and is not included in the paid-class calculations. Allocating one trial to a learner's first paid plan reduces that plan's teacher-cost contribution by €1.50. The trial remains free to the learner.
+
+### Internal commercial conclusion
+
+“At the approved teacher compensation of €1.50 per eligible 40-minute lesson, all six approved private plans have positive and currently acceptable direct teacher-cost contribution. The lowest direct contribution margin is 68.56% before payment fees, taxes, administration, marketing and other operating costs.”
+
+This conclusion addresses direct teacher cost only. It is not a claim of final profit, net profit or production readiness.
 
 ## Deployment blockers
 
-- **Teacher compensation review** — unresolved.
-- **Gross-margin review** — unresolved.
+- **Teacher-compensation review** — resolved for current pre-launch pricing.
+- **Gross-margin review** — direct teacher-cost contribution is recorded; the Final minimum net-margin policy remains unresolved.
 - **Payment-provider selection** — unresolved; no provider is approved or active.
-- **Tax and accounting review** — unresolved.
-- **Refund and consumer-law review** — unresolved.
+- **Payment-provider fees** — unresolved.
+- **Tax and accounting treatment** — unresolved.
+- **Administrative cost** — unresolved.
+- **Marketing and acquisition cost** — unresolved.
+- **Refund and chargeback exposure** — unresolved.
+- **Consumer-law review** — unresolved.
+- **Future teacher-rate changes** — require a new economics review before compensation or pricing changes.
 - **Legal-entity information** — unresolved.
 - **Final Terms and Conditions** — unresolved.
 - **Final Privacy Policy** — unresolved.
