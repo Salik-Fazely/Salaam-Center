@@ -19,6 +19,7 @@ PUBLIC_HTML_PATHS = (
     "programs/afghan-culture-islamic-ethics/index.html",
     "teachers/index.html",
     "how-it-works/index.html",
+    "pricing/index.html",
     "about/index.html",
     "book-trial/index.html",
     "privacy-policy/index.html",
@@ -30,6 +31,7 @@ PUBLIC_HTML_PATHS = (
 DOCUMENTATION_PATHS = frozenset({
     "SALAM-CENTER-APPROVED-FACTS.md",
     "MIGRATION-SOURCE.md",
+    "docs/COMMERCIAL-AND-ENROLMENT.md",
 })
 
 # Skip links are in-page controls, not public HTML routes. Any other clean internal
@@ -135,6 +137,23 @@ APPROVED_STUDENT_EVIDENCE = (
     ),
 )
 
+APPROVED_PRIVATE_PLAN_EVIDENCE = (
+    (4, 1, 4, 49, None),
+    (4, 2, 8, 69, None),
+    (4, 4, 16, 99, None),
+    (12, 1, 12, 119, 28),
+    (12, 2, 24, 129, 78),
+    (12, 4, 48, 229, 68),
+)
+
+APPROVED_CERTIFICATE_EVIDENCE = (
+    "Digital certificate of completion for eligible 12-week-plan learners.",
+    "At least 80% of scheduled paid classes must be completed.",
+    "Any outstanding payment obligation must be resolved.",
+    "The certificate acknowledges participation and completion.",
+    "It is not an academic accreditation, qualification or government-recognised certificate.",
+)
+
 _APPROVED_TEACHER_PATHS = frozenset({"index.html", "teachers/index.html"})
 _APPROVED_STUDENT_PATHS = frozenset({"index.html"})
 
@@ -146,9 +165,12 @@ class _ClaimRule:
     pattern: re.Pattern[str]
     surfaces: frozenset[SurfaceType] | None = None
     certificate_rule: bool = False
+    commercial_rule: bool = False
+    question_safe: bool = False
 
 
 _HTML_ONLY = frozenset({SurfaceType.HTML})
+_STRUCTURED_ONLY = frozenset({SurfaceType.STRUCTURED_DATA})
 
 CLAIM_RULES = (
     _ClaimRule(
@@ -216,6 +238,15 @@ CLAIM_RULES = (
         certificate_rule=True,
     ),
     _ClaimRule(
+        "certificate promise",
+        "completion-certificate noun phrase outside its eligible 12-week evidence card",
+        re.compile(
+            r"\b(?:(?:digital|eligible|end-of-course)\s+){0,2}(?:certificate\s+of\s+completion|completion\s+certificate)\b",
+            re.IGNORECASE,
+        ),
+        certificate_rule=True,
+    ),
+    _ClaimRule(
         "combined teacher experience",
         "collective teaching experience total",
         re.compile(
@@ -251,20 +282,114 @@ CLAIM_RULES = (
             re.IGNORECASE,
         ),
     ),
+    _ClaimRule(
+        "unapproved public price",
+        "currency amount outside an exact approved pricing card or homepage preview",
+        re.compile(
+            r"(?:[€$£]\s*\d[\d,.]*|\b(?:EUR|USD|CAD|GBP)\s*\d[\d,.]*\b|"
+            r"\b\d[\d,.]*\s*(?:EUR|USD|CAD|GBP)\b)",
+            re.IGNORECASE,
+        ),
+    ),
+    _ClaimRule(
+        "unapproved public price",
+        "structured price or currency field outside an approved HTML evidence card",
+        re.compile(
+            r"[\"'](?:price|lowPrice|highPrice|minPrice|maxPrice|priceCurrency)"
+            r"[\"']\s*:",
+            re.IGNORECASE,
+        ),
+        _STRUCTURED_ONLY,
+    ),
+    _ClaimRule(
+        "unapproved public percentage",
+        "numeric percentage outside exact approved certificate eligibility",
+        re.compile(r"\b\d{1,3}(?:\.\d+)?\s*%"),
+    ),
+    _ClaimRule(
+        "active automatic renewal",
+        "positive automatic-renewal language",
+        re.compile(
+            r"\bautomatic\s+renewal\b|\brenew(?:s|ed|ing)?\s+automatically\b|"
+            r"\bautomatically\s+renew(?:s|ed|ing)?\b",
+            re.IGNORECASE,
+        ),
+        commercial_rule=True,
+        question_safe=True,
+    ),
+    _ClaimRule(
+        "active checkout or payment state",
+        "checkout, payment action, or completed-payment language",
+        re.compile(
+            r"\b(?:checkout|buy\s+now|pay\s+now|subscribe|reserve\s+with\s+payment)\b|"
+            r"\bpayment\b[^.!?;\n]{0,28}\bcompleted\b",
+            re.IGNORECASE,
+        ),
+        commercial_rule=True,
+    ),
+    _ClaimRule(
+        "unsupported free paid plan",
+        "paid plan, class, or lesson described as free",
+        re.compile(
+            r"(?:\bpaid\s+(?:plan|classes?|lessons?)\b[^.!?;\n]{0,30}\bfree\b|"
+            r"\bfree\b[^.!?;\n]{0,30}\bpaid\s+(?:plan|classes?|lessons?)\b)",
+            re.IGNORECASE,
+        ),
+        commercial_rule=True,
+    ),
+    _ClaimRule(
+        "unsupported tax claim",
+        "tax or VAT inclusion claim",
+        re.compile(
+            r"(?:\b(?:tax(?:es)?|vat)\b[^.!?;\n]{0,24}\b(?:included|inclusive)\b|"
+            r"\b(?:prices?|pricing|amounts?|totals?)\b[^.!?;\n]{0,36}"
+            r"\binclude(?:s|d|ing)?\s+(?:tax(?:es)?|vat)\b)",
+            re.IGNORECASE,
+        ),
+        commercial_rule=True,
+    ),
+    _ClaimRule(
+        "payment-provider integration",
+        "named payment provider",
+        re.compile(r"\b(?:Stripe|PayPal|Revolut)\b", re.IGNORECASE),
+    ),
 )
 
-_CERTIFICATE_NEGATED_CONSTRUCTION = re.compile(
-    r"(?:\bno\s+(?:\w+[ -]?){0,4}certificates?\b|"
-    r"\b(?:(?:do|does|did|will|would|can|could|should|must)\s+not|"
-    r"do(?:es)?n['’]t|didn['’]t|won['’]t|wouldn['’]t|can['’]t|cannot|"
-    r"couldn['’]t|shouldn['’]t|mustn['’]t|isn['’]t|aren['’]t)\s+"
-    r"(?!only\b)[^,;:.!?\n]{0,40}\b(?:receive|earn|get|gain|award|provide|"
-    r"include|promise)\w*\b[^,;:.!?\n]{0,40}\bcertificates?\b|"
-    r"\bcertificates?\b[^,;:.!?\n]{0,40}\b(?:(?:(?:is|are|will|would|can|"
-    r"could|should|must|be)\s+)?(?:not|never)|isn['’]t|aren['’]t|won['’]t|"
-    r"wouldn['’]t|can['’]t|cannot|couldn['’]t|shouldn['’]t|mustn['’]t)\s+"
-    r"(?!only\b)[^,;:.!?\n]{0,24}\b(?:receive|earn|get|gain|"
-    r"award|provide|include|promise)\w*\b)",
+_DIRECT_NEGATION_PREFIX = re.compile(
+    r"(?:\bno(?:\s+[\w/-]+){0,2}\s+|"
+    r"\b(?:do|does|did|is|are|was|were|has|have|had|will|would|can|could|"
+    r"should|must)\s+not(?:\s+[\w/-]+)?\s+|"
+    r"\b(?:don['’]t|doesn['’]t|didn['’]t|isn['’]t|aren['’]t|wasn['’]t|"
+    r"weren['’]t|hasn['’]t|haven['’]t|hadn['’]t|won['’]t|wouldn['’]t|"
+    r"can['’]t|cannot|couldn['’]t|shouldn['’]t|mustn['’]t)"
+    r"(?:\s+[\w/-]+)?\s+)$",
+    re.IGNORECASE,
+)
+
+_DIRECT_NEGATION_WITHIN_MATCH = re.compile(
+    r"\b(?:(?:not|never)\s+|"
+    r"(?:don['’]t|doesn['’]t|didn['’]t|isn['’]t|aren['’]t|wasn['’]t|"
+    r"weren['’]t|hasn['’]t|haven['’]t|hadn['’]t|won['’]t|wouldn['’]t|"
+    r"can['’]t|cannot|couldn['’]t|shouldn['’]t|mustn['’]t)\s+)"
+    r"(?:currently\s+|yet\s+)?(?:be(?:en)?\s+)?(?:renew\w*|complete(?:d)?|"
+    r"active|available|free|include\w*|inclusive|promis\w*|provid\w*|"
+    r"award\w*|receiv\w*|earn\w*|get|gain)\b",
+    re.IGNORECASE,
+)
+
+_DIRECT_NEGATION_SUFFIX = re.compile(
+    r"^\s+(?:(?:is|are|was|were|has|have|had|will|would|can|could|should|"
+    r"must)(?:\s+be|\s+been)?\s+(?:not|never)|"
+    r"(?:isn['’]t|aren['’]t|wasn['’]t|weren['’]t|hasn['’]t|haven['’]t|"
+    r"hadn['’]t|won['’]t|wouldn['’]t|can['’]t|cannot|couldn['’]t|"
+    r"shouldn['’]t|mustn['’]t))\b\s+(?:currently\s+|yet\s+)?"
+    r"(?:active|available|enabled|included|promised|provided|awarded|offered|"
+    r"complete(?:d)?|free)\b",
+    re.IGNORECASE,
+)
+
+_COORDINATING_BOUNDARY = re.compile(
+    r"\b(?:and|but|yet|while|although|however|then)\b",
     re.IGNORECASE,
 )
 
@@ -285,11 +410,14 @@ def _mask_protected_ranges(surface: SurfaceText) -> str:
     return "".join(masked)
 
 
-def _certificate_match_is_negated(text: str, start: int, end: int) -> bool:
+def _predicate_match_is_negated(
+    text: str,
+    start: int,
+    end: int,
+    question_safe: bool = False,
+) -> bool:
     clause_marks = (".", "!", "?", ";", ",", ":", "\n")
-    clause_start = max(
-        text.rfind(mark, 0, start) for mark in clause_marks
-    ) + 1
+    clause_start = max(text.rfind(mark, 0, start) for mark in clause_marks) + 1
     clause_ends = [
         position
         for mark in clause_marks
@@ -297,7 +425,51 @@ def _certificate_match_is_negated(text: str, start: int, end: int) -> bool:
     ]
     clause_end = min(clause_ends) if clause_ends else len(text)
     clause = text[clause_start:clause_end]
-    return _CERTIFICATE_NEGATED_CONSTRUCTION.search(clause) is not None
+    match_start = start - clause_start
+    match_end = end - clause_start
+
+    if (
+        question_safe
+        and clause_end < len(text)
+        and text[clause_end] == "?"
+        and re.match(
+            r"\s*(?:does|do|did|will|would|is|are|can|could|should)\b",
+            clause,
+            re.IGNORECASE,
+        )
+    ):
+        return True
+
+    prefix = clause[:match_start]
+    coordinating_matches = tuple(_COORDINATING_BOUNDARY.finditer(prefix))
+    if coordinating_matches:
+        prefix = prefix[coordinating_matches[-1].end():]
+    prefix = re.sub(r"[\"'`]\s*\+\s*[\"'`]\s*$", "", prefix)
+    matched_text = clause[match_start:match_end]
+    suffix = clause[match_end:]
+    return (
+        _DIRECT_NEGATION_PREFIX.search(prefix) is not None
+        or _DIRECT_NEGATION_WITHIN_MATCH.search(matched_text) is not None
+        or _DIRECT_NEGATION_SUFFIX.search(suffix) is not None
+    )
+
+
+def _certificate_match_is_negated(text: str, start: int, end: int) -> bool:
+    return _predicate_match_is_negated(text, start, end)
+
+
+def _commercial_match_is_negated(
+    text: str,
+    start: int,
+    end: int,
+    question_safe: bool = False,
+) -> bool:
+    return _predicate_match_is_negated(
+        text,
+        start,
+        end,
+        question_safe=question_safe,
+    )
 
 
 def _sanitize_excerpt(text: str) -> str:
@@ -493,6 +665,13 @@ def _virtual_rendered_claims(text: str) -> tuple[tuple[str, str], ...]:
                 text, match.start(), match.end()
             ):
                 continue
+            if claim_rule.commercial_rule and _commercial_match_is_negated(
+                text,
+                match.start(),
+                match.end(),
+                question_safe=claim_rule.question_safe,
+            ):
+                continue
             claims.append(
                 (
                     claim_rule.category,
@@ -661,6 +840,13 @@ def scan_surface(surface: SurfaceText) -> tuple[Finding, ...]:
                 masked_text, match.start(), match.end()
             ):
                 continue
+            if claim_rule.commercial_rule and _commercial_match_is_negated(
+                masked_text,
+                match.start(),
+                match.end(),
+                question_safe=claim_rule.question_safe,
+            ):
+                continue
             results.append(
                 _finding_for_match(
                     surface,
@@ -716,7 +902,7 @@ _VISIBLE_BLOCK_TAGS = frozenset({
     "dt", "fieldset", "figcaption", "figure", "footer", "form", "h1", "h2",
     "h3", "h4", "h5", "h6", "header", "hr", "li", "main", "nav", "ol",
     "p", "pre", "section", "table", "tbody", "td", "tfoot", "th", "thead",
-    "tr", "ul",
+    "tr", "ul", "details", "summary",
 })
 
 
@@ -759,8 +945,10 @@ class _MappedTextBuilder:
 @dataclass
 class _EvidenceCard:
     kind: str
+    tag: str
     start: int
     depth: int
+    attributes: dict[str, str]
     attribute_values: list[str]
 
 
@@ -783,22 +971,37 @@ class _PublicHTMLParser(HTMLParser):
         if not self._in_head and normalized_tag in _VISIBLE_BLOCK_TAGS:
             self.visible.boundary(line)
 
-        if normalized_tag == "article":
-            if self._evidence_card is not None:
-                self._evidence_card.depth += 1
-            else:
-                attributes = {name.lower(): value or "" for name, value in attrs}
-                classes = frozenset(attributes.get("class", "").split())
-                kind = next(
-                    (
-                        value
-                        for value in ("teacher-card", "feedback-video-card")
-                        if value in classes
-                    ),
-                    "",
+        if (
+            self._evidence_card is not None
+            and normalized_tag == self._evidence_card.tag
+        ):
+            self._evidence_card.depth += 1
+        elif self._evidence_card is None and normalized_tag in ("article", "section"):
+            attributes = {name.lower(): value or "" for name, value in attrs}
+            classes = frozenset(attributes.get("class", "").split())
+            kind = next(
+                (
+                    value
+                    for value in (
+                        "teacher-card",
+                        "feedback-video-card",
+                        "pricing-card",
+                        "pricing-preview",
+                        "benefit-card--extended",
+                    )
+                    if value in classes
+                ),
+                "",
+            )
+            if kind:
+                self._evidence_card = _EvidenceCard(
+                    kind,
+                    normalized_tag,
+                    len(self.visible),
+                    1,
+                    attributes,
+                    [],
                 )
-                if kind:
-                    self._evidence_card = _EvidenceCard(kind, len(self.visible), 1, [])
         if self._evidence_card is not None:
             self._evidence_card.attribute_values.extend(
                 value for _, value in attrs if value is not None
@@ -841,7 +1044,10 @@ class _PublicHTMLParser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         normalized_tag = tag.lower()
         line, _ = self.getpos()
-        if normalized_tag == "article" and self._evidence_card is not None:
+        if (
+            self._evidence_card is not None
+            and normalized_tag == self._evidence_card.tag
+        ):
             self._evidence_card.depth -= 1
             if self._evidence_card.depth == 0:
                 self._protect_approved_card(self._evidence_card, len(self.visible))
@@ -900,6 +1106,86 @@ class _PublicHTMLParser(HTMLParser):
             ]
             if len(matches) == 1:
                 self.visible.protect(matches[0][1], card.start, end)
+        elif card.kind == "pricing-card" and self._relative_path == "pricing/index.html":
+            matches = []
+            for weeks, frequency, classes, price, saving in APPROVED_PRIVATE_PLAN_EVIDENCE:
+                expected_attributes = {
+                    "data-plan-weeks": str(weeks),
+                    "data-frequency": str(frequency),
+                    "data-paid-classes": str(classes),
+                    "data-price-eur": str(price),
+                }
+                if saving is not None:
+                    expected_attributes["data-saving-eur"] = str(saving)
+                elif card.attributes.get("data-saving-eur"):
+                    continue
+                frequency_text = (
+                    "1 class per week"
+                    if frequency == 1
+                    else f"{frequency} classes per week"
+                )
+                validity = (
+                    "6-week final validity"
+                    if weeks == 4
+                    else "16-week final validity"
+                )
+                expected_text = (
+                    frequency_text,
+                    f"{classes} paid classes",
+                    "40 minutes each",
+                    f"€{price} total",
+                    "Private Quran or Dari/Persian",
+                    "One learner",
+                    "One selected program",
+                    f"{weeks}-week teaching period",
+                    validity,
+                    "Does not renew automatically",
+                    "Start with a Free Trial",
+                )
+                if all(card.attributes.get(key) == value for key, value in expected_attributes.items()) and all(
+                    value in card_text for value in expected_text
+                ):
+                    if saving is None or (
+                        f"Saves €{saving} compared with three consecutive 4-week plans at the same frequency."
+                        in card_text
+                    ):
+                        matches.append((price, saving))
+            if len(matches) == 1:
+                price, saving = matches[0]
+                self.visible.protect(f"€{price} total", card.start, end)
+                if saving is not None:
+                    self.visible.protect(
+                        f"Saves €{saving} compared with three consecutive 4-week plans at the same frequency.",
+                        card.start,
+                        end,
+                    )
+        elif card.kind == "pricing-preview" and self._relative_path == "index.html":
+            expected = (
+                "Flexible plans for consistent learning",
+                "Private Quran and Dari/Persian learners can choose a 4-week or 12-week plan",
+                "From €49 for a 4-week plan",
+                "40-minute private lessons",
+                "Free first trial",
+                "View Plans and Pricing",
+            )
+            if (
+                card.attributes.get("data-starting-price-eur") == "49"
+                and "/pricing/" in attributes
+                and all(value in card_text for value in expected)
+            ):
+                self.visible.protect("From €49 for a 4-week plan", card.start, end)
+        elif (
+            card.kind == "benefit-card--extended"
+            and self._relative_path == "pricing/index.html"
+            and card.attributes.get("data-plan-weeks") == "12"
+            and all(value in card_text for value in APPROVED_CERTIFICATE_EVIDENCE)
+        ):
+            self.visible.protect("Digital certificate of completion", card.start, end)
+            self.visible.protect(
+                "At least 80% of scheduled paid classes must be completed.",
+                card.start,
+                end,
+            )
 
 
 def _resolve_local_script(root: Path, html_path: Path, source: str) -> Path | None:

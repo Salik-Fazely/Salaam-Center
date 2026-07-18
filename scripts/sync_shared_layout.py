@@ -30,6 +30,7 @@ NAV_PLACEHOLDERS = {
     "how_it_works": "{{NAV_HOW_IT_WORKS_CURRENT}}",
     "teachers": "{{NAV_TEACHERS_CURRENT}}",
     "about": "{{NAV_ABOUT_CURRENT}}",
+    "pricing": "{{NAV_PRICING_CURRENT}}",
 }
 NAV_CURRENT_PATHS = {
     "home": "index.html",
@@ -37,6 +38,7 @@ NAV_CURRENT_PATHS = {
     "programs": "programs/index.html",
     "teachers": "teachers/index.html",
     "how_it_works": "how-it-works/index.html",
+    "pricing": "pricing/index.html",
     "about": "about/index.html",
 }
 VALID_NAV_KEYS = {None, *NAV_PLACEHOLDERS}
@@ -66,6 +68,7 @@ PAGE_CONFIGS = (
     ),
     PageConfig("teachers/index.html", "teachers"),
     PageConfig("how-it-works/index.html", "how_it_works"),
+    PageConfig("pricing/index.html", "pricing"),
     PageConfig("about/index.html", "about"),
     PageConfig("book-trial/index.html", None),
     PageConfig("privacy-policy/index.html", None),

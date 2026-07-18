@@ -14,7 +14,7 @@ Reject unsupported trust claims on Salaam Center's actual public surfaces while 
 
 The dependency-free Python scanner owns:
 
-- an explicit 14-route public HTML manifest;
+- an explicit 15-route public HTML manifest;
 - public HTML, metadata, JSON-LD, inline-script, and referenced-local-script extraction;
 - repository-contained local script resolution without following network URLs;
 - scope classification as public, documentation only, or inactive;
@@ -32,15 +32,17 @@ No dependency, build system, analytics, form, contact destination, payment path,
 
 Executable JavaScript scope includes inline public scripts and local scripts referenced from a manifest page. Unreferenced JavaScript and unlisted, unlinked HTML are inactive; file extension alone does not make either public.
 
-`SALAM-CENTER-APPROVED-FACTS.md`, `MIGRATION-SOURCE.md`, and test fixtures are documentation-only scope. Authority-document classification is path-based. Editors must nevertheless keep unsupported or retired references clearly labelled as internal, inherited, unsupported, unresolved, prohibited, or not approved for public use.
+`SALAM-CENTER-APPROVED-FACTS.md`, `MIGRATION-SOURCE.md`, `docs/COMMERCIAL-AND-ENROLMENT.md`, and test fixtures are documentation-only scope. Authority-document classification is path-based. Editors must nevertheless keep unsupported or retired references clearly labelled as internal, inherited, unsupported, unresolved, prohibited, or not approved for public use.
 
 ## Claim and evidence behavior
 
-The scanner rejects unsupported public testimonial language, ratings/reviews, learner or family counts, success percentages, positive certificate promises, combined teacher-experience totals, aggregate statistics/counters, and active inherited analytics, form, or contact behavior.
+The scanner rejects unsupported public testimonial language, ratings/reviews, learner or family counts, success percentages, positive certificate promises, prices, currencies, percentage badges, automatic renewal, checkout or completed-payment states, free-paid-plan claims, tax-inclusion claims, named payment providers, combined teacher-experience totals, aggregate statistics/counters, and active inherited analytics, form, or contact behavior.
 
 `APPROVED_TEACHER_EVIDENCE` associates each approved teacher name, individual experience statement, and video ID. `APPROVED_STUDENT_EVIDENCE` associates each approved student video ID and consent-sensitive caption. A matching evidence string is protected only inside the expected card on an approved route; unassociated reuse remains scannable and fails when it matches a prohibited category.
 
-Positive certificate-promise patterns fail unless the matching clause contains a recognized negative construction. Wording such as unresolved or prohibited is acceptable only when it does not make a positive promise. Documentation-only classification does not depend on these words.
+Positive certificate-promise patterns fail unless the matching predicate contains a recognized direct negative construction or the phrase is protected inside the exact eligible 12-week evidence card with its attendance, resolved-payment, participation-only and non-accreditation context. Exact commercial prices and savings are similarly protected only in their associated approved pricing card or homepage preview. Structured price and price-currency fields fail outside those HTML associations, and an unrelated negative phrase cannot mask renewal, checkout, free-paid-plan, tax or certificate evidence. Wording such as unresolved or prohibited is acceptable only when it does not make a positive promise. Documentation-only classification does not depend on these words.
+
+These exact commercial associations are narrow public-evidence exceptions, not broad allowlists.
 
 Each finding contains path, line, surface, category, matched rule, classification, and a sanitized excerpt capped at 180 characters. Public findings fail the audit; documentation-only findings remain visible for review without failing it.
 
@@ -67,6 +69,7 @@ Use these verification commands from the repository root:
 ```powershell
 $env:PYTHONDONTWRITEBYTECODE='1'
 python -m unittest tests.trust_evidence_regression_test -v
+python -m unittest tests.pricing_and_commercial_test -v
 python -m unittest discover -s tests -p '*_test.py'
 $testFiles = (Get-ChildItem -Path 'tests' -Filter '*.js' -File).FullName
 node --test $testFiles
@@ -75,12 +78,13 @@ node --check assets/js/main.js
 git diff --check
 ```
 
-The implementation baseline recorded on 2026-07-18 is:
+The commercial-foundation verification baseline recorded on 2026-07-18 is:
 
-- 36 focused trust-evidence tests;
-- 85 full Python tests;
+- 42 focused trust-evidence tests;
+- 14 focused pricing and commercial tests;
+- 106 full Python tests;
 - 11 JavaScript tests;
-- 14 public HTML pages;
+- 15 public HTML pages;
 - 1 referenced local JavaScript file;
 - 0 public trust-evidence failures.
 

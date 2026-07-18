@@ -2,7 +2,7 @@
 
 ## Status and authority
 
-This design was approved and implemented on 2026-07-18. The maintained implementation is `scripts/trust_evidence_scanner.py` with regression coverage in `tests/trust_evidence_regression_test.py`. It enforces the trust-evidence rules in `SALAM-CENTER-APPROVED-FACTS.md`, `MIGRATION-SOURCE.md`, and the user's final implementation guardrails. Repository integration does not authorize a push, deployment, or external-service activation.
+This design was approved and implemented on 2026-07-18. The maintained implementation is `scripts/trust_evidence_scanner.py` with regression coverage in `tests/trust_evidence_regression_test.py`. It enforces the trust-evidence rules in `SALAM-CENTER-APPROVED-FACTS.md`, `MIGRATION-SOURCE.md`, `docs/COMMERCIAL-AND-ENROLMENT.md`, and the user's final implementation guardrails. Repository integration does not authorize a push, deployment, or external-service activation.
 
 ## Objective
 
@@ -16,7 +16,7 @@ The scanner assigns repository inputs to explicit scopes:
 - **Metadata:** title, standard metadata, Open Graph metadata, Twitter metadata, and similar head content in public HTML.
 - **Structured data:** JSON-LD and other structured-data blocks in public HTML.
 - **Executable JavaScript:** local JavaScript files referenced by public HTML, plus inline public scripts. Local references are resolved within the repository. Unreferenced JavaScript is inactive and outside this public-executable scope.
-- **Documentation only:** `SALAM-CENTER-APPROVED-FACTS.md`, `MIGRATION-SOURCE.md`, negative regression fixtures, and denylist values used only to test scanner behavior.
+- **Documentation only:** `SALAM-CENTER-APPROVED-FACTS.md`, `MIGRATION-SOURCE.md`, `docs/COMMERCIAL-AND-ENROLMENT.md`, negative regression fixtures, and denylist values used only to test scanner behavior.
 
 Documentation-only occurrences are classified by their repository path and reported as such; they do not fail the public-surface audit. Authors must still clearly label those records as internal, inherited, unsupported, unresolved, prohibited, or not approved for public use. Those labels are editorial safeguards, not the scanner's classification mechanism.
 
@@ -49,7 +49,9 @@ Student videos:
 
 The existing student captions and consent-sensitive wording remain unchanged. The implementation must also preserve `youtube-nocookie.com`, video-ID validation, duplicate-player prevention, accessible native controls, descriptive player naming, focus transfer, focus visibility, focus restoration where currently present, and keyboard behavior. This regression task does not invent a new dialog or player-control system.
 
-Protected evidence uses exact values or tightly scoped fixtures. An approved teacher experience or student caption is exempted only when it is associated with its matching identity or video ID inside the expected card on an approved route. There is no broad keyword exception for teacher, student, experience, video, or certificate terms.
+Protected evidence uses exact values or tightly scoped fixtures. An approved teacher experience or student caption is exempted only when it is associated with its matching identity or video ID inside the expected card on an approved route. There is no broad keyword exception for teacher, student, experience, video, pricing or certificate terms. Exact commercial evidence is protected only in the associated pricing card, homepage preview or eligible 12-week certificate-benefit card on its approved route.
+
+The exact commercial associations are regression boundaries, not general price or certificate allowlists.
 
 ## Prohibited public claims
 
@@ -59,7 +61,8 @@ Category-level rules reject unsupported public claims, including:
 - star ratings, review scores, review counts, and aggregate-rating or review structured data;
 - unsupported learner, student, family, or enrollment counts;
 - success rates and success percentages;
-- positive certificate promises;
+- positive certificate promises outside the exact eligible 12-week evidence context;
+- unapproved pricing, currencies, percentage badges, automatic renewal, checkout, completed-payment, paid-plan-free, tax-inclusion or named-provider claims;
 - combined teacher-experience totals;
 - unsupported aggregate statistics;
 - dynamically injected counters or trust claims;
@@ -69,9 +72,9 @@ Approved individual teacher experience remains valid. A combined statement such 
 
 ## Certificate semantics
 
-The scanner distinguishes positive promises from negative, unresolved, or prohibitive statements.
+The scanner distinguishes positive promises from negative, unresolved, or prohibitive statements. Negative handling is tied to the matching predicate so an unrelated negative phrase in the same sentence cannot suppress a prohibited certificate or commercial claim. Structured price and price-currency fields remain prohibited because the approved evidence associations are HTML-card specific.
 
-Allowed examples include statements that certificates are not promised, requirements remain unresolved, or certificate claims must not be published. Prohibited examples include statements that a certificate is included, a learner will receive a certificate, or an end-of-course certificate is included.
+The approved exception is an eligible 12-week completion certificate associated with the exact attendance, resolved-payment, participation-only and non-accreditation context. Statements attaching it to a 4-week plan or omitting that context still fail. Negative, unresolved and prohibitive certificate statements also remain allowed. Other positive certificate promises fail.
 
 Internal wording is still required to be clearly labelled as unsupported, inherited, unresolved, prohibited, or not approved for public use.
 
@@ -83,7 +86,7 @@ One focused Python scanner module does the following:
 2. parse each page into visible HTML, metadata, structured data, inline JavaScript, and local script references;
 3. follow only referenced local JavaScript;
 4. apply category rules to each public surface;
-5. classify the two authority documents and test fixtures as documentation only;
+5. classify the three authority and operational documents plus test fixtures as documentation only;
 6. return structured findings with scope, category, rule, path, line, and sanitized excerpt.
 
 One focused `unittest` module tests both scanner behavior with isolated fixtures and the current repository state. The implementation follows existing Python conventions and adds no dependency or external tooling.
@@ -108,6 +111,8 @@ Scanner-classification tests cover these guarantees:
 - the same phrase in each approved authority document is documentation only;
 - negative test fixtures do not contaminate repository scans;
 - exact approved individual teacher experience passes only in its matching teacher card on an approved route;
+- exact private-plan prices, class counts and euro savings pass only in their matching pricing cards, while the homepage starting price passes only in its approved preview;
+- the eligible 12-week certificate passes only with its complete eligibility context;
 - a combined experience total fails;
 - approved teacher and student video evidence passes;
 - positive certificate promises fail while negative or unresolved wording passes;
@@ -126,7 +131,7 @@ Maintenance verification runs:
 5. JavaScript syntax validation;
 6. `git diff --check`.
 
-The implemented baseline is 36 focused Python tests, 85 full Python tests, and 11 JavaScript tests. Future reports state the observed totals and confirm that all required approved teacher and student evidence remains present, documentation and provenance records remain available, and no external service, push, or deployment was activated without explicit authorization.
+The commercial-foundation verification baseline is 42 focused trust-evidence tests, 14 focused pricing and commercial tests, 106 full Python tests, and 11 JavaScript tests. The repository scan covers 15 public HTML pages and one referenced local JavaScript file with zero public failures; documentation-only findings remain reviewable and non-failing. Future reports state the observed totals and confirm that all required approved teacher and student evidence remains present, documentation and provenance records remain available, and no external service, push, or deployment was activated without explicit authorization.
 
 ## Non-goals
 

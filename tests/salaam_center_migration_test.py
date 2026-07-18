@@ -16,6 +16,7 @@ CORE_PAGES = (
     "programs/afghan-culture-islamic-ethics/index.html",
     "teachers/index.html",
     "how-it-works/index.html",
+    "pricing/index.html",
     "about/index.html",
     "book-trial/index.html",
     "privacy-policy/index.html",
@@ -30,6 +31,7 @@ EXPECTED_NAVIGATION = (
     ("Programs", "/programs/"),
     ("Teachers", "/teachers/"),
     ("How It Works", "/how-it-works/"),
+    ("Pricing", "/pricing/"),
     ("About", "/about/"),
 )
 
@@ -141,7 +143,7 @@ class BrandAndArchitectureTests(unittest.TestCase):
                 continue
             navigation.append((" ".join("".join(item["text"]).split()), item["attrs"].get("href")))
         self.assertEqual(EXPECTED_NAVIGATION, tuple(navigation))
-        self.assertNotIn("Pricing", visible_text("index.html"))
+        self.assertIn("Pricing", visible_text("index.html"))
 
     def test_public_pages_use_salaam_center_without_inherited_business_identity(self):
         forbidden = (
@@ -208,7 +210,6 @@ class IntegrationAndMetadataSafetyTests(unittest.TestCase):
     def test_no_production_or_deployment_files_are_present(self):
         self.assertFalse((ROOT / "CNAME").exists())
         self.assertFalse((ROOT / "sitemap.xml").exists())
-        self.assertFalse((ROOT / "pricing/index.html").exists())
         self.assertFalse((ROOT / "pricing.html").exists())
         workflows = ROOT / ".github/workflows"
         self.assertFalse(workflows.exists() and any(workflows.iterdir()))
@@ -245,7 +246,10 @@ class ProgramAndPrelaunchContentTests(unittest.TestCase):
         for name in ("Quran", "Dari/Persian", "Afghan Culture & Islamic Ethics"):
             self.assertIn(name, public)
         self.assertNotIn("Pashto", public)
-        self.assertNotRegex(public, r"€\s*\d|\d\s*€")
+        self.assertNotRegex(
+            visible_text("programs/afghan-culture-islamic-ethics/index.html"),
+            r"€\s*\d|\d\s*€",
+        )
 
     def test_trial_page_is_informative_and_collects_no_personal_data(self):
         page = source("book-trial/index.html")
@@ -266,7 +270,10 @@ class ProgramAndPrelaunchContentTests(unittest.TestCase):
         self.assertIn("Privacy information is being prepared", privacy)
         self.assertIn("not currently collecting trial-booking or payment information", privacy)
         self.assertIn("Terms and conditions are being prepared", terms)
-        self.assertIn("before paid enrolment opens", terms)
+        self.assertIn(
+            "Complete terms will be provided before any payment is accepted.",
+            terms,
+        )
 
 
 class TeacherAndMediaPreservationTests(unittest.TestCase):

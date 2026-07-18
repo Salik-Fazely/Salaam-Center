@@ -30,6 +30,64 @@ def findings(
     )
 
 
+def html_findings(markup: str, relative_path: str = "pricing/index.html"):
+    with TemporaryDirectory() as directory:
+        root = Path(directory)
+        target = root / relative_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(markup, encoding="utf-8")
+        surfaces, _, _ = extract_public_surfaces(root, (relative_path,))
+        return tuple(
+            item
+            for surface in surfaces
+            for item in scan_surface(surface)
+        )
+
+
+def pricing_card(
+    weeks: int,
+    frequency: int,
+    paid_classes: int,
+    price: int,
+    saving: int | None = None,
+) -> str:
+    frequency_text = "1 class per week" if frequency == 1 else f"{frequency} classes per week"
+    validity = "6-week final validity" if weeks == 4 else "16-week final validity"
+    saving_text = (
+        ""
+        if saving is None
+        else f"<p>Saves €{saving} compared with three consecutive 4-week plans at the same frequency.</p>"
+    )
+    saving_attribute = "" if saving is None else f' data-saving-eur="{saving}"'
+    return (
+        f'<article class="pricing-card" data-plan-weeks="{weeks}" '
+        f'data-frequency="{frequency}" data-paid-classes="{paid_classes}" '
+        f'data-price-eur="{price}"{saving_attribute}>'
+        f"<h3>{frequency_text}</h3>"
+        f"<p>{paid_classes} paid classes · 40 minutes each</p>"
+        f"<p>€{price} total</p>{saving_text}"
+        "<p>Private Quran or Dari/Persian</p>"
+        "<p>One learner</p><p>One selected program</p>"
+        f"<p>{weeks}-week teaching period</p><p>{validity}</p>"
+        "<p>Does not renew automatically</p>"
+        '<a href="/book-trial/">Start with a Free Trial</a>'
+        "</article>"
+    )
+
+
+def certificate_benefit(weeks: int = 12) -> str:
+    return (
+        f'<article class="benefit-card benefit-card--extended" data-plan-weeks="{weeks}">'
+        "<h3>Digital certificate of completion</h3>"
+        "<p>Digital certificate of completion for eligible 12-week-plan learners.</p>"
+        "<p>At least 80% of scheduled paid classes must be completed.</p>"
+        "<p>Any outstanding payment obligation must be resolved.</p>"
+        "<p>The certificate acknowledges participation and completion.</p>"
+        "<p>It is not an academic accreditation, qualification or government-recognised certificate.</p>"
+        "</article>"
+    )
+
+
 class SurfaceClassificationTests(unittest.TestCase):
     def test_authority_documents_and_tests_are_documentation_only(self):
         root = Path("C:/repo")
@@ -40,6 +98,10 @@ class SurfaceClassificationTests(unittest.TestCase):
         self.assertEqual(
             Classification.DOCUMENTATION_ONLY,
             classify_path(root, root / "MIGRATION-SOURCE.md"),
+        )
+        self.assertEqual(
+            Classification.DOCUMENTATION_ONLY,
+            classify_path(root, root / "docs/COMMERCIAL-AND-ENROLMENT.md"),
         )
         self.assertEqual(
             Classification.DOCUMENTATION_ONLY,
@@ -258,6 +320,24 @@ class ClaimRuleTests(unittest.TestCase):
             ),
         )
 
+    def test_javascript_split_commercial_literals_follow_public_claim_rules(self):
+        unsafe = (
+            "node.textContent = '€' + '49';",
+            "node.textContent = '20' + '% off';",
+            "node.textContent = 'This plan renew' + 's automatically.';",
+        )
+        for value in unsafe:
+            with self.subTest(value=value):
+                self.assertTrue(findings(value, SurfaceType.EXECUTABLE_JAVASCRIPT))
+
+        self.assertEqual(
+            (),
+            findings(
+                "node.textContent = 'Does not ' + 'renew automatically.';",
+                SurfaceType.EXECUTABLE_JAVASCRIPT,
+            ),
+        )
+
     def test_javascript_call_sinks_select_each_rendered_text_argument(self):
         unsafe = (
             "node.insertAdjacentText('beforeend', '4.9' + ' stars');",
@@ -407,6 +487,7 @@ class ClaimRuleTests(unittest.TestCase):
         for path in (
             Path("SALAM-CENTER-APPROVED-FACTS.md"),
             Path("MIGRATION-SOURCE.md"),
+            Path("docs/COMMERCIAL-AND-ENROLMENT.md"),
             Path("tests/fixture.py"),
         ):
             result = scan_surface(
@@ -434,16 +515,154 @@ class ClaimRuleTests(unittest.TestCase):
             "Certificate included.",
             "Receive a certificate.",
             "End-of-course certificate included.",
+            "We do not delay lessons and include a certificate.",
         ):
             self.assertTrue(findings(value), value)
         for value in (
             "Certificates are not currently promised.",
+            "A certificate of completion is not promised.",
             "Certificate requirements remain unresolved.",
             "Do not publish certificate claims.",
             "No certificate is included.",
             "Do not receive a certificate.",
         ):
             self.assertEqual((), findings(value), value)
+
+    def test_only_exact_associated_private_plan_evidence_is_allowed(self):
+        approved = (
+            (4, 1, 4, 49, None),
+            (4, 2, 8, 69, None),
+            (4, 4, 16, 99, None),
+            (12, 1, 12, 119, 28),
+            (12, 2, 24, 129, 78),
+            (12, 4, 48, 229, 68),
+        )
+        for plan in approved:
+            with self.subTest(plan=plan):
+                self.assertEqual((), html_findings(pricing_card(*plan)))
+
+        valid = pricing_card(4, 1, 4, 49)
+        variants = (
+            valid.replace("€49 total", "€50 total"),
+            valid.replace("4 paid classes", "5 paid classes"),
+            valid.replace("Private Quran or Dari/Persian", "Private Quran or Pashto"),
+            valid.replace("One learner", "One family"),
+            valid.replace("One selected program", "Two selected programs"),
+            valid.replace('class="pricing-card"', 'class="generic-card"'),
+        )
+        for markup in variants:
+            with self.subTest(markup=markup):
+                self.assertTrue(html_findings(markup))
+        self.assertTrue(
+            html_findings(
+                valid,
+                "programs/afghan-culture-islamic-ethics/index.html",
+            )
+        )
+
+    def test_homepage_starting_price_requires_its_exact_preview_context(self):
+        preview = (
+            '<section class="section pricing-preview" data-starting-price-eur="49">'
+            "<h2>Flexible plans for consistent learning</h2>"
+            "<p>Private Quran and Dari/Persian learners can choose a 4-week or 12-week plan.</p>"
+            "<p>From €49 for a 4-week plan</p>"
+            "<p>40-minute private lessons · Free first trial</p>"
+            '<a href="/pricing/">View Plans and Pricing</a>'
+            "</section>"
+        )
+        self.assertEqual((), html_findings(preview, "index.html"))
+        self.assertTrue(html_findings("<p>From €49 for a 4-week plan</p>", "index.html"))
+        self.assertTrue(
+            html_findings(
+                preview.replace("Private Quran and Dari/Persian", "Afghan Culture & Islamic Ethics"),
+                "index.html",
+            )
+        )
+
+    def test_certificate_exception_requires_the_full_12_week_eligibility_context(self):
+        approved = certificate_benefit()
+        self.assertEqual((), html_findings(approved))
+        for markup in (
+            certificate_benefit(4),
+            approved.replace(
+                "At least 80% of scheduled paid classes must be completed.",
+                "All learners qualify.",
+            ),
+            approved.replace(
+                "It is not an academic accreditation, qualification or government-recognised certificate.",
+                "It is an academic accreditation.",
+            ),
+        ):
+            with self.subTest(markup=markup):
+                self.assertTrue(html_findings(markup))
+        self.assertTrue(findings("Digital certificate of completion."))
+        self.assertTrue(findings("At least 80% of scheduled paid classes must be completed."))
+
+    def test_unapproved_commercial_claims_fail_on_every_public_surface(self):
+        prohibited = (
+            "The plan costs €49.",
+            "The plan costs $49.",
+            "The plan costs 49 USD.",
+            "Private Dari plan: EUR 999 total.",
+            "Save 19.0%.",
+            "20% off.",
+            "Automatic renewal is included.",
+            "Automatic renewal is not optional.",
+            "This plan renews automatically.",
+            "This plan is automatically renewed.",
+            "This plan does not have a setup fee and renews automatically.",
+            "Proceed to checkout.",
+            "Checkout is not disabled.",
+            "This does not reserve a teacher and checkout now.",
+            "Payment completed.",
+            "Payment completed is not reversible.",
+            "This paid plan is free.",
+            "This is a free paid plan.",
+            "This free paid plan is not refundable.",
+            "Tax is included.",
+            "The price includes VAT.",
+            "VAT-inclusive pricing.",
+            "VAT included is not negotiable.",
+            "All taxes are included.",
+            "Prices include tax.",
+            "Certificate included is not optional.",
+            "Pay with Stripe.",
+        )
+        for surface in (
+            SurfaceType.HTML,
+            SurfaceType.METADATA,
+            SurfaceType.STRUCTURED_DATA,
+            SurfaceType.EXECUTABLE_JAVASCRIPT,
+        ):
+            for value in prohibited:
+                with self.subTest(surface=surface, value=value):
+                    self.assertTrue(findings(value, surface))
+
+        allowed_negative_copy = (
+            "Does not renew automatically.",
+            "No automatic renewal.",
+            "Automatic renewal is not active.",
+            "Does the plan renew automatically? No.",
+            "No pricing checkout is active.",
+            "Checkout is not active.",
+            "No payment has been completed.",
+            "This paid plan is not free.",
+            "The price does not include VAT.",
+            "VAT is not included.",
+            "No payment is required for the free trial.",
+            "Refund terms remain pending legal and accounting review.",
+        )
+        for value in allowed_negative_copy:
+            with self.subTest(value=value):
+                self.assertEqual((), findings(value))
+
+    def test_structured_offer_price_fields_fail_without_a_scoped_html_card(self):
+        result = findings(
+            '{"@type":"Offer","price":"50","priceCurrency":"EUR"}',
+            SurfaceType.STRUCTURED_DATA,
+        )
+        self.assertTrue(result)
+        self.assertTrue(all(item.category == "unapproved public price" for item in result))
 
     def test_testimonial_and_rating_evidence_fails(self):
         for value in (
@@ -642,7 +861,9 @@ class RepositoryTrustEvidenceTests(unittest.TestCase):
             for path in (
                 "SALAM-CENTER-APPROVED-FACTS.md",
                 "MIGRATION-SOURCE.md",
+                "docs/COMMERCIAL-AND-ENROLMENT.md",
             ):
+                (root / path).parent.mkdir(parents=True, exist_ok=True)
                 (root / path).write_text("documentation", encoding="utf-8")
 
             with self.assertRaisesRegex(
@@ -675,6 +896,7 @@ class RepositoryTrustEvidenceTests(unittest.TestCase):
                 "programs/afghan-culture-islamic-ethics/index.html",
                 "teachers/index.html",
                 "how-it-works/index.html",
+                "pricing/index.html",
                 "about/index.html",
                 "book-trial/index.html",
                 "privacy-policy/index.html",
@@ -709,7 +931,9 @@ class RepositoryTrustEvidenceTests(unittest.TestCase):
             for path in (
                 "SALAM-CENTER-APPROVED-FACTS.md",
                 "MIGRATION-SOURCE.md",
+                "docs/COMMERCIAL-AND-ENROLMENT.md",
             ):
+                (root / path).parent.mkdir(parents=True, exist_ok=True)
                 (root / path).write_text("500+ learners", encoding="utf-8")
 
             report = scan_repository(root, ("index.html",))
@@ -718,7 +942,11 @@ class RepositoryTrustEvidenceTests(unittest.TestCase):
             self.assertEqual((root / "assets/js/live.js",), report.public_script_paths)
             self.assertEqual([root / "assets/js/live.js"], [item.path for item in report.failures])
             self.assertEqual(
-                [root / "MIGRATION-SOURCE.md", root / "SALAM-CENTER-APPROVED-FACTS.md"],
+                [
+                    root / "MIGRATION-SOURCE.md",
+                    root / "SALAM-CENTER-APPROVED-FACTS.md",
+                    root / "docs/COMMERCIAL-AND-ENROLMENT.md",
+                ],
                 [item.path for item in report.documentation],
             )
 
@@ -730,7 +958,9 @@ class RepositoryTrustEvidenceTests(unittest.TestCase):
             for path in (
                 "SALAM-CENTER-APPROVED-FACTS.md",
                 "MIGRATION-SOURCE.md",
+                "docs/COMMERCIAL-AND-ENROLMENT.md",
             ):
+                (root / path).parent.mkdir(parents=True, exist_ok=True)
                 (root / path).write_text("documentation", encoding="utf-8")
 
             with self.assertRaisesRegex(ValueError, "outside the repository root"):

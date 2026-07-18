@@ -17,6 +17,7 @@ PUBLIC_PAGES = (
     "programs/afghan-culture-islamic-ethics/index.html",
     "teachers/index.html",
     "how-it-works/index.html",
+    "pricing/index.html",
     "about/index.html",
     "book-trial/index.html",
     "privacy-policy/index.html",
@@ -114,6 +115,14 @@ class AccessibilityStaticTests(unittest.TestCase):
         trial = source("book-trial/index.html")
         self.assertNotRegex(trial, r"<(?:form|input|select|textarea)\b")
         self.assertIn("Online trial booking is being prepared and is not yet open.", trial)
+
+    def test_pricing_disclosures_are_native_and_pricing_has_no_commercial_controls(self):
+        pricing = source("pricing/index.html")
+        main = re.search(r'<main id="main-content">.*?</main>', pricing, re.S).group(0)
+        self.assertEqual(11, pricing.count("<details"))
+        self.assertEqual(11, pricing.count("<summary>"))
+        self.assertNotRegex(main, r"<(?:form|input|select|textarea|button)\b")
+        self.assertNotRegex(main, r'role=["\'](?:button|tab|tabpanel)["\']')
 
     def test_public_copy_avoids_internal_migration_and_approval_language(self):
         internal_phrases = (

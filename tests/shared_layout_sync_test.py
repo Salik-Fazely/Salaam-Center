@@ -22,6 +22,7 @@ EXPECTED_COMPLETE_PAGES = (
     "programs/afghan-culture-islamic-ethics/index.html",
     "teachers/index.html",
     "how-it-works/index.html",
+    "pricing/index.html",
     "about/index.html",
     "book-trial/index.html",
     "privacy-policy/index.html",
@@ -35,6 +36,7 @@ ACTIVE_HREFS = {
     "programs": "/programs/",
     "teachers": "/teachers/",
     "how_it_works": "/how-it-works/",
+    "pricing": "/pricing/",
     "about": "/about/",
 }
 
@@ -74,11 +76,11 @@ class SharedLayoutSyncTests(unittest.TestCase):
         self.assertTrue(HEADER.is_file())
         self.assertTrue(FOOTER.is_file())
 
-    def test_02_page_map_covers_the_fourteen_complete_pages(self):
+    def test_02_page_map_covers_the_fifteen_complete_pages(self):
         sync = load_sync_module()
         configured = tuple(config.path for config in sync.PAGE_CONFIGS)
         self.assertEqual(EXPECTED_COMPLETE_PAGES, configured)
-        self.assertEqual(14, len(configured))
+        self.assertEqual(15, len(configured))
 
     def test_03_each_configured_page_has_exactly_one_marker_pair(self):
         sync = load_sync_module()
@@ -98,7 +100,7 @@ class SharedLayoutSyncTests(unittest.TestCase):
             text=True,
         )
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        self.assertIn("14 page(s)", result.stdout)
+        self.assertIn("15 page(s)", result.stdout)
 
     def test_05_rendering_is_idempotent_in_memory(self):
         sync = load_sync_module()
@@ -114,6 +116,7 @@ class SharedLayoutSyncTests(unittest.TestCase):
             "programs": "programs/index.html",
             "teachers": "teachers/index.html",
             "how_it_works": "how-it-works/index.html",
+            "pricing": "pricing/index.html",
             "about": "about/index.html",
         }
         for config in sync.PAGE_CONFIGS:
@@ -152,17 +155,21 @@ class SharedLayoutSyncTests(unittest.TestCase):
             ("Programs", "/programs/"),
             ("Teachers", "/teachers/"),
             ("How It Works", "/how-it-works/"),
+            ("Pricing", "/pricing/"),
             ("About", "/about/"),
             ("Book a Free Trial", "/book-trial/"),
         ):
             self.assertIn(f'href="{href}"', header, label)
             self.assertIn(label, header)
-        self.assertNotIn("Pricing", header)
+        self.assertLess(header.index("How It Works"), header.index("Pricing"))
+        self.assertLess(header.index("Pricing"), header.index("About"))
 
     def test_09_shared_footer_has_no_contact_or_external_destination(self):
         footer = FOOTER.read_text(encoding="utf-8")
         self.assertIn("Contact details will be available before enrolment opens.", footer)
-        for value in ("mailto:", "tel:", "wa.me/", "http://", "https://", "Pricing"):
+        self.assertIn('href="/pricing/"', footer)
+        self.assertIn("Pricing", footer)
+        for value in ("mailto:", "tel:", "wa.me/", "http://", "https://"):
             self.assertNotIn(value, footer)
 
     def test_10_shared_sections_have_no_trailing_whitespace(self):
