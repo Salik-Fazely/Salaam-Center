@@ -25,12 +25,12 @@ class MobileHeaderStaticTests(unittest.TestCase):
 
     def test_trial_cta_accessible_name_comes_from_its_visible_label(self):
         header = source(HEADER)
-        cta = re.search(r'<a href="/book-trial/" class="btn btn--primary nav__cta"([^>]*)>', header)
+        cta = re.search(r'<a href="/en/book-trial/" class="btn btn--primary nav__cta"([^>]*)>', header)
         self.assertIsNotNone(cta)
         self.assertNotIn("aria-label", cta.group(1))
         self.assertRegex(
             header,
-            r'<a href="/book-trial/" class="btn btn--primary nav__cta">\s*Book a Free Trial\s*</a>',
+            r'<a href="/en/book-trial/" class="btn btn--primary nav__cta">\s*Book a Free Trial\s*</a>',
         )
 
     def test_mobile_runtime_hides_inert_links_and_manages_focus(self):
@@ -87,10 +87,8 @@ class MobileHeaderStaticTests(unittest.TestCase):
         )[0]
         menu = re.search(r"\.nav__links\.is-enhanced\s*\{([^}]*)\}", compact_rules, re.S)
         self.assertIsNotNone(menu)
-        self.assertIn("right: -1rem", menu.group(1))
-        self.assertIn("left: -1rem", menu.group(1))
-        self.assertIn("padding-right: 1rem", menu.group(1))
-        self.assertIn("padding-left: 1rem", menu.group(1))
+        self.assertIn("inset-inline: -1rem", menu.group(1))
+        self.assertIn("padding-inline: 1rem", menu.group(1))
 
 
 if __name__ == "__main__":

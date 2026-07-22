@@ -8,33 +8,33 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 CORE_PAGES = (
-    "index.html",
-    "our-approach/index.html",
-    "programs/index.html",
-    "programs/quran/index.html",
-    "programs/dari-persian/index.html",
-    "programs/afghan-culture-islamic-ethics/index.html",
-    "teachers/index.html",
-    "how-it-works/index.html",
-    "pricing/index.html",
-    "about/index.html",
-    "book-trial/index.html",
-    "contact/index.html",
-    "privacy-policy/index.html",
-    "terms/index.html",
-    "success/index.html",
-    "404.html",
+    "en/index.html",
+    "en/our-approach/index.html",
+    "en/programs/index.html",
+    "en/programs/quran/index.html",
+    "en/programs/dari-persian/index.html",
+    "en/programs/afghan-culture-islamic-ethics/index.html",
+    "en/teachers/index.html",
+    "en/how-it-works/index.html",
+    "en/pricing/index.html",
+    "en/about/index.html",
+    "en/book-trial/index.html",
+    "en/contact/index.html",
+    "en/privacy-policy/index.html",
+    "en/terms/index.html",
+    "en/success/index.html",
+    "en/404.html",
 )
-NOINDEX_PAGES = {"success/index.html", "404.html"}
+NOINDEX_PAGES = {"en/success/index.html", "en/404.html"}
 
 EXPECTED_NAVIGATION = (
-    ("Home", "/"),
-    ("Our Approach", "/our-approach/"),
-    ("Programs", "/programs/"),
-    ("Teachers", "/teachers/"),
-    ("How It Works", "/how-it-works/"),
-    ("Pricing", "/pricing/"),
-    ("About", "/about/"),
+    ("Home", "/en/"),
+    ("Our Approach", "/en/our-approach/"),
+    ("Programs", "/en/programs/"),
+    ("Teachers", "/en/teachers/"),
+    ("How It Works", "/en/how-it-works/"),
+    ("Pricing", "/en/pricing/"),
+    ("About", "/en/about/"),
 )
 
 EXPECTED_TEACHERS = {
@@ -135,15 +135,28 @@ class BrandAndArchitectureTests(unittest.TestCase):
             self.assertTrue((ROOT / relative_path).is_file(), relative_path)
 
     def test_shared_navigation_contains_only_the_approved_primary_links(self):
-        parser = parse("index.html")
+        parser = parse("en/index.html")
         navigation = []
         for item in parser.nav_links:
             classes = set(item["attrs"].get("class", "").split())
-            if "nav__link" not in classes:
+            if (
+                "nav__link" not in classes
+                or "data-language-switch" in item["attrs"]
+            ):
                 continue
             navigation.append((" ".join("".join(item["text"]).split()), item["attrs"].get("href")))
         self.assertEqual(EXPECTED_NAVIGATION, tuple(navigation))
-        self.assertIn("Pricing", visible_text("index.html"))
+        language_switches = [
+            item
+            for item in parser.nav_links
+            if "data-language-switch" in item["attrs"]
+        ]
+        self.assertEqual(2, len(language_switches))
+        self.assertEqual(
+            ["/", "/"],
+            [item["attrs"].get("href") for item in language_switches],
+        )
+        self.assertIn("Pricing", visible_text("en/index.html"))
 
     def test_public_pages_use_salaam_center_without_inherited_business_identity(self):
         forbidden = (
@@ -208,7 +221,7 @@ class IntegrationAndMetadataSafetyTests(unittest.TestCase):
 
     def test_only_the_approved_client_side_whatsapp_contact_destination_exists(self):
         public = "\n".join(path.read_text(encoding="utf-8") for path in public_html_files())
-        trial = source("book-trial/index.html")
+        trial = source("en/book-trial/index.html")
         self.assertEqual(1, len(re.findall(r"<form\b", public)))
         self.assertIn('data-whatsapp-handoff="true"', trial)
         self.assertNotRegex(trial, r'<form\b[^>]+action=')
@@ -231,19 +244,19 @@ class IntegrationAndMetadataSafetyTests(unittest.TestCase):
 class ProgramAndProductionContentTests(unittest.TestCase):
     def test_launch_programs_and_eligibility_match_approved_facts(self):
         expected = {
-            "programs/quran/index.html": (
+            "en/programs/quran/index.html": (
                 "Private one-to-one",
                 "Children and teenagers aged 5–16",
                 "Women of any age",
                 "40-minute lessons",
             ),
-            "programs/dari-persian/index.html": (
+            "en/programs/dari-persian/index.html": (
                 "Private one-to-one",
                 "Children and teenagers aged 5–16",
                 "Women of any age",
                 "40-minute lessons",
             ),
-            "programs/afghan-culture-islamic-ethics/index.html": (
+            "en/programs/afghan-culture-islamic-ethics/index.html": (
                 "Group classes",
                 "Children and teenagers aged 5–16",
                 "40-minute lessons",
@@ -260,13 +273,13 @@ class ProgramAndProductionContentTests(unittest.TestCase):
             self.assertIn(name, public)
         self.assertNotIn("Pashto", public)
         self.assertNotRegex(
-            visible_text("programs/afghan-culture-islamic-ethics/index.html"),
+            visible_text("en/programs/afghan-culture-islamic-ethics/index.html"),
             r"€\s*\d|\d\s*€",
         )
 
     def test_trial_page_prepares_whatsapp_locally_without_collecting_child_contact_data(self):
-        page = source("book-trial/index.html")
-        text = visible_text("book-trial/index.html")
+        page = source("en/book-trial/index.html")
+        text = visible_text("en/book-trial/index.html")
         self.assertIn("Continue in WhatsApp", text)
         self.assertIn("prepared locally", text)
         self.assertIn('data-whatsapp-handoff="true"', page)
@@ -274,15 +287,15 @@ class ProgramAndProductionContentTests(unittest.TestCase):
         self.assertNotRegex(page, r'(?i)name="(?:email|phone|learner_(?:name|first_name|surname))"')
 
     def test_submission_status_never_claims_a_request_was_sent(self):
-        text = visible_text("success/index.html")
+        text = visible_text("en/success/index.html")
         self.assertIn("Continue your conversation in WhatsApp", text)
         self.assertIn("cannot confirm", text)
         for claim in ("Thank you", "successfully submitted", "we received your request", "message sent", "trial confirmed"):
             self.assertNotIn(claim.lower(), text.lower())
 
     def test_privacy_and_terms_are_final_operational_notices(self):
-        privacy = visible_text("privacy-policy/index.html")
-        terms = visible_text("terms/index.html")
+        privacy = visible_text("en/privacy-policy/index.html")
+        terms = visible_text("en/terms/index.html")
         for value in (
             "Privacy Policy",
             "Salaam Center",
@@ -309,7 +322,7 @@ class ProgramAndProductionContentTests(unittest.TestCase):
 
 class TeacherAndMediaPreservationTests(unittest.TestCase):
     def test_all_teacher_names_profile_facts_and_video_ids_are_preserved(self):
-        teachers = source("teachers/index.html")
+        teachers = source("en/teachers/index.html")
         for name, (languages, experience, video_id) in EXPECTED_TEACHERS.items():
             self.assertEqual(1, teachers.count(f'>{name}<'), name)
             self.assertIn(languages, teachers, name)
@@ -318,7 +331,7 @@ class TeacherAndMediaPreservationTests(unittest.TestCase):
             self.assertIn(f'https://i.ytimg.com/vi/{video_id}/hqdefault.jpg', teachers, name)
 
     def test_student_video_ids_urls_and_accessible_labels_are_preserved(self):
-        homepage = source("index.html")
+        homepage = source("en/index.html")
         for index, video_id in enumerate(sorted(STUDENT_VIDEO_IDS), start=1):
             self.assertIn(f'data-youtube-id="{video_id}"', homepage)
             self.assertIn(f'https://i.ytimg.com/vi/{video_id}/hqdefault.jpg', homepage)

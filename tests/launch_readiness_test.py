@@ -11,29 +11,41 @@ import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
 
-from scripts.deployment_boundary import expected_redirect_rules, public_backing_pairs
+from scripts.deployment_boundary import (
+    PUBLIC_PAGE_SOURCES,
+    expected_redirect_rules,
+    public_backing_pairs,
+)
+from scripts.localized_routes import (
+    LANGUAGE_KEYS,
+    load_localized_routes,
+    source_path_for_public_path,
+)
 
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config/launch-readiness.json"
 PREFLIGHT = ROOT / "scripts/launch_preflight.py"
-PUBLIC_PAGES = (
-    "index.html", "our-approach/index.html", "programs/index.html",
-    "programs/quran/index.html", "programs/dari-persian/index.html",
-    "programs/afghan-culture-islamic-ethics/index.html", "teachers/index.html",
-    "how-it-works/index.html", "pricing/index.html", "about/index.html",
-    "book-trial/index.html", "contact/index.html", "privacy-policy/index.html",
-    "terms/index.html", "success/index.html", "404.html",
+LOCALIZED_ROUTES = load_localized_routes(ROOT)
+PUBLIC_PAGES = PUBLIC_PAGE_SOURCES
+NOINDEX_PAGES = tuple(
+    source_path_for_public_path(route.public_path(language))
+    for route in LOCALIZED_ROUTES
+    if not route.indexable
+    for language in LANGUAGE_KEYS
 )
-NOINDEX_PAGES = ("success/index.html", "404.html")
 INDEXABLE_PAGES = tuple(page for page in PUBLIC_PAGES if page not in NOINDEX_PAGES)
 ROUTES = {
-    "index.html": "/", "404.html": "/404.html",
-    **{path: f"/{path.removesuffix('index.html')}" for path in PUBLIC_PAGES
-       if path not in {"index.html", "404.html"}},
+    source_path_for_public_path(route.public_path(language)): route.public_path(language)
+    for route in LOCALIZED_ROUTES
+    for language in LANGUAGE_KEYS
 }
-SITEMAP_ROUTES = {route for page, route in ROUTES.items()
-                  if page not in {"success/index.html", "404.html"}}
+SITEMAP_ROUTES = {
+    route.public_path(language)
+    for route in LOCALIZED_ROUTES
+    if route.sitemap
+    for language in LANGUAGE_KEYS
+}
 
 
 class HeadParser(HTMLParser):
@@ -95,6 +107,19 @@ class LaunchConfigurationTests(unittest.TestCase):
         self.assertIs(data["privacy_policy_final_approved"], True)
         self.assertIs(data["terms_final_approved"], True)
         self.assertEqual("none", data["analytics_mode"])
+        self.assertEqual("fa-AF", data["default_language"])
+        self.assertEqual(["fa-AF", "en"], data["supported_languages"])
+        self.assertEqual("/en", data["english_path_prefix"])
+        self.assertIs(data["automatic_language_redirect"], False)
+        self.assertEqual("rtl", data["dari_direction"])
+        self.assertEqual("ltr", data["english_direction"])
+        self.assertEqual("Vazirmatn", data["dari_font"])
+        for key in (
+            "localized_route_pairs_verified",
+            "hreflang_verified",
+            "bilingual_sitemap_verified",
+        ):
+            self.assertIs(data[key], True, key)
         for key in ("github_pages_enabled", "cname_required", "search_console_enabled"):
             self.assertIs(data[key], False, key)
         for obsolete in (
@@ -212,60 +237,45 @@ class PreflightTests(unittest.TestCase):
             "terms_final_approved": True,
             "whatsapp_live_link_tested": True,
         })
-        generic_link = (
-            f'<a href="{module.WHATSAPP_URL}" target="_blank" '
-            'rel="noopener noreferrer">WhatsApp</a>'
-        )
-        bases = {
-            page: (
-                f'<link rel="canonical" href="{module.PRODUCTION_ORIGIN + module.ROUTES[page]}">'
-                + generic_link
-            )
+        source = {
+            page: (ROOT / page).read_text(encoding="utf-8")
             for page in PUBLIC_PAGES
         }
-        source = dict(bases)
-        for page in NOINDEX_PAGES:
-            source[page] += '<meta name="robots" content="noindex, nofollow">'
-        source["teachers/index.html"] += " ".join(module.PROTECTED_NAMES + module.PROTECTED_VIDEO_IDS)
-        source["pricing/index.html"] += " ".join(module.APPROVED_PRICES)
-        source["book-trial/index.html"] = (
-            bases["book-trial/index.html"]
-            + '<form data-whatsapp-handoff="true">'
-            + '<button type="button" data-whatsapp-submit>Continue in WhatsApp</button></form>'
-        )
-        truthful_success = (
-            bases["success/index.html"]
-            + '<meta name="robots" content="noindex, nofollow">'
-            + "<h1>Continue your conversation in WhatsApp</h1>"
-            + "<p>The website cannot confirm whether you pressed Send.</p>"
-            + "<p>The trial is not booked until Salaam Center confirms teacher and schedule availability.</p>"
-        )
-        source["success/index.html"] = truthful_success
+        bases = dict(source)
+        truthful_success = bases["success/index.html"]
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "assets/js").mkdir(parents=True)
-            (root / "assets/css").mkdir(parents=True)
-            (root / "assets/logo").mkdir(parents=True)
             for page, markup in source.items():
                 target = root / page
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(markup, encoding="utf-8")
-            (root / "assets/css/styles.css").write_text("", encoding="utf-8")
-            (root / "assets/logo/salaam-center-favicon.svg").write_text("", encoding="utf-8")
+            for source_path, _ in public_backing_pairs():
+                target = root / source_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((ROOT / source_path).read_bytes())
             redirects_path = root / "_redirects"
             redirects_path.write_text(
                 "\n".join(expected_redirect_rules()) + "\n",
                 encoding="utf-8",
             )
-            (root / "robots.txt").write_text(
-                "User-agent: *\nAllow: /\nSitemap: https://salaam.center/sitemap.xml\n",
-                encoding="utf-8",
+            sitemap_entries = "".join(
+                "<url><loc>"
+                + url
+                + "</loc>"
+                + "".join(
+                    f'<xhtml:link rel="alternate" hreflang="{language}" href="{href}" />'
+                    for language, href in module.SITEMAP_ALTERNATES[url]
+                )
+                + "</url>"
+                for url in sorted(module.SITEMAP_URLS)
             )
-            sitemap_entries = "".join(f"<url><loc>{url}</loc></url>" for url in sorted(module.SITEMAP_URLS))
             sitemap_path = root / "sitemap.xml"
             sitemap_path.write_text(
-                f'<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{sitemap_entries}</urlset>',
+                '<?xml version="1.0"?><urlset '
+                'xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+                'xmlns:xhtml="http://www.w3.org/1999/xhtml">'
+                f"{sitemap_entries}</urlset>",
                 encoding="utf-8",
             )
             handoff_script = (
@@ -275,7 +285,6 @@ class PreflightTests(unittest.TestCase):
             )
             script_path = root / "assets/js/trial-form.js"
             script_path.write_text(handoff_script, encoding="utf-8")
-            (root / "assets/js/main.js").write_text("", encoding="utf-8")
             for source_path, backing_path in public_backing_pairs():
                 target = root / backing_path
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -309,9 +318,11 @@ class PreflightTests(unittest.TestCase):
 
             for page in NOINDEX_PAGES:
                 original = source[page]
-                source[page] = original.replace(
-                    '<meta name="robots" content="noindex, nofollow">',
+                source[page] = re.sub(
+                    r'<meta\s+name="robots"\s+content="noindex, nofollow"\s*/?>',
                     "",
+                    original,
+                    count=1,
                 )
                 missing_noindex = module.Result()
                 with contextlib.redirect_stdout(io.StringIO()):
@@ -379,7 +390,7 @@ class PreflightTests(unittest.TestCase):
             false_success = module.Result()
             with contextlib.redirect_stdout(io.StringIO()):
                 module.production(config, source, false_success)
-            self.assertIn("Success page remains truthful", false_success.failures)
+            self.assertIn("both Success pages remain truthful", false_success.failures)
 
             source["success/index.html"] = truthful_success
             source["contact/index.html"] += " Contact us at hello@example.test."
@@ -424,7 +435,7 @@ class PreflightTests(unittest.TestCase):
                         network_submission.failures,
                     )
                     self.assertIn(
-                        "safe client-side WhatsApp handoff",
+                        "both client-side WhatsApp handoffs are safe",
                         network_submission.failures,
                     )
 
@@ -457,8 +468,10 @@ class PreflightTests(unittest.TestCase):
             self.assertIn("sitemap.xml is present and valid", invalid_sitemap.failures)
 
             sitemap_path.write_text(
-                f'<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-                f'{sitemap_entries.replace("</loc></url>", "</loc><lastmod>2026-07-22</lastmod></url>", 1)}'
+                '<?xml version="1.0"?><urlset '
+                'xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
+                'xmlns:xhtml="http://www.w3.org/1999/xhtml">'
+                f'{sitemap_entries.replace("</loc>", "</loc><lastmod>2026-07-22</lastmod>", 1)}'
                 f'</urlset>',
                 encoding="utf-8",
             )
@@ -470,8 +483,8 @@ class PreflightTests(unittest.TestCase):
 
 
 class MetadataAndSitemapTests(unittest.TestCase):
-    def test_all_sixteen_pages_have_unique_complete_route_metadata(self):
-        self.assertEqual(16, len(PUBLIC_PAGES))
+    def test_all_thirty_two_pages_have_unique_complete_route_metadata(self):
+        self.assertEqual(32, len(PUBLIC_PAGES))
         titles, descriptions = [], []
         for page in PUBLIC_PAGES:
             parser = parse_head(page)
@@ -498,10 +511,37 @@ class MetadataAndSitemapTests(unittest.TestCase):
 
     def test_sitemap_is_valid_and_contains_only_approved_search_routes(self):
         root = ET.parse(ROOT / "sitemap.xml").getroot()
-        namespace = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
+        namespace = {
+            "sm": "http://www.sitemaps.org/schemas/sitemap/0.9",
+            "xhtml": "http://www.w3.org/1999/xhtml",
+        }
         locations = [node.text for node in root.findall("sm:url/sm:loc", namespace)]
+        self.assertEqual(28, len(locations))
         self.assertEqual(len(locations), len(set(locations)))
         self.assertEqual({"https://salaam.center" + route for route in SITEMAP_ROUTES}, set(locations))
+        for url_node in root.findall("sm:url", namespace):
+            location = url_node.findtext("sm:loc", namespaces=namespace)
+            route = next(
+                route
+                for route in LOCALIZED_ROUTES
+                if location in {
+                    "https://salaam.center" + route.fa_AF,
+                    "https://salaam.center" + route.en,
+                }
+            )
+            alternates = [
+                (link.attrib.get("hreflang"), link.attrib.get("href"))
+                for link in url_node.findall("xhtml:link", namespace)
+            ]
+            self.assertEqual(
+                [
+                    ("fa-AF", "https://salaam.center" + route.fa_AF),
+                    ("en", "https://salaam.center" + route.en),
+                    ("x-default", "https://salaam.center" + route.fa_AF),
+                ],
+                alternates,
+                location,
+            )
         self.assertTrue(all(value.startswith("https://salaam.center") for value in locations))
         self.assertFalse(any("success" in value or "salaamcenter.org" in value for value in locations))
         self.assertFalse(any(node.tag.endswith("lastmod") for node in root.iter()))
@@ -520,42 +560,59 @@ class MetadataAndSitemapTests(unittest.TestCase):
         blocks = []
         for page in PUBLIC_PAGES:
             source = (ROOT / page).read_text(encoding="utf-8")
-            blocks.extend(re.findall(
-                r'<script\s+type="application/ld\+json">\s*(.*?)\s*</script>',
-                source,
-                flags=re.DOTALL,
-            ))
-        self.assertEqual(1, len(blocks))
-        data = json.loads(blocks[0])
-        graph = data["@graph"]
-        self.assertEqual({"EducationalOrganization", "WebSite"}, {item["@type"] for item in graph})
-        organization = next(item for item in graph if item["@type"] == "EducationalOrganization")
-        self.assertEqual("Salaam Center", organization["name"])
-        self.assertEqual("https://salaam.center/", organization["url"])
-        self.assertNotIn("email", organization)
-        serialized = json.dumps(data).casefold()
-        for unsupported in (
-            "aggregaterating", "review", "ratingvalue", "telephone", "address",
-            "sameas", "foundingdate", "accreditation", "teacher compensation",
-        ):
-            self.assertNotIn(unsupported, serialized)
+            blocks.extend(
+                (page, block)
+                for block in re.findall(
+                    r'<script\s+type="application/ld\+json">\s*(.*?)\s*</script>',
+                    source,
+                    flags=re.DOTALL,
+                )
+            )
+        self.assertEqual({"index.html", "en/index.html"}, {page for page, _ in blocks})
+        self.assertEqual(2, len(blocks))
+        expected_home = {
+            "index.html": ("fa-AF", "https://salaam.center/"),
+            "en/index.html": ("en", "https://salaam.center/en/"),
+        }
+        for page, block in blocks:
+            data = json.loads(block)
+            graph = data["@graph"]
+            self.assertEqual(
+                {"EducationalOrganization", "WebSite"},
+                {item["@type"] for item in graph},
+            )
+            language, url = expected_home[page]
+            for item in graph:
+                self.assertEqual("Salaam Center", item["name"])
+                self.assertEqual(url, item["url"])
+                self.assertEqual(language, item["inLanguage"])
+            organization = next(
+                item for item in graph if item["@type"] == "EducationalOrganization"
+            )
+            self.assertNotIn("email", organization)
+            serialized = json.dumps(data).casefold()
+            for unsupported in (
+                "aggregaterating", "review", "ratingvalue", "telephone", "address",
+                "sameas", "foundingdate", "accreditation", "teacher compensation",
+            ):
+                self.assertNotIn(unsupported, serialized)
 
 
 class ContactAndPolicyTests(unittest.TestCase):
     def test_contact_route_and_shared_footer_are_safe(self):
-        contact = (ROOT / "contact/index.html").read_text(encoding="utf-8")
+        contact = (ROOT / "en/contact/index.html").read_text(encoding="utf-8")
         footer = (ROOT / "partials/footer.html").read_text(encoding="utf-8")
         self.assertIn("Contact Salaam Center", contact)
         self.assertIn('href="https://wa.me/34614401172"', contact)
         self.assertIn('target="_blank"', contact)
         self.assertIn('rel="noopener noreferrer"', contact)
         self.assertIn("parent or guardian", contact.lower())
-        self.assertIn('href="/contact/"', footer)
+        self.assertIn('href="/en/contact/"', footer)
         self.assertNotRegex(contact + footer, r"(?i)mailto:|\btel:|hello@salaam\.center")
 
     def test_final_privacy_terms_and_no_tracking_position_are_explicit(self):
-        privacy = (ROOT / "privacy-policy/index.html").read_text(encoding="utf-8")
-        terms = (ROOT / "terms/index.html").read_text(encoding="utf-8")
+        privacy = (ROOT / "en/privacy-policy/index.html").read_text(encoding="utf-8")
+        terms = (ROOT / "en/terms/index.html").read_text(encoding="utf-8")
         docs = "\n".join((ROOT / path).read_text(encoding="utf-8") for path in (
             "SALAM-CENTER-APPROVED-FACTS.md", "docs/COMMERCIAL-AND-ENROLMENT.md"))
         for phrase in (
@@ -592,8 +649,14 @@ class ContactAndPolicyTests(unittest.TestCase):
         self.assertIn("Cloudflare Pages is the production hosting source of truth", facts)
 
     def test_final_legal_pages_avoid_unsupported_legal_and_service_claims(self):
-        privacy = (ROOT / "privacy-policy/index.html").read_text(encoding="utf-8")
-        terms = (ROOT / "terms/index.html").read_text(encoding="utf-8")
+        privacy_pages = tuple(
+            (ROOT / path).read_text(encoding="utf-8")
+            for path in ("privacy-policy/index.html", "en/privacy-policy/index.html")
+        )
+        terms_pages = tuple(
+            (ROOT / path).read_text(encoding="utf-8")
+            for path in ("terms/index.html", "en/terms/index.html")
+        )
         for pattern in (
             r"(?i)company registration",
             r"(?i)data.protection officer|\bDPO\b",
@@ -604,7 +667,8 @@ class ContactAndPolicyTests(unittest.TestCase):
             r"(?i)guaranteed data location|stored only in",
             r"(?i)guaranteed international transfer",
         ):
-            self.assertNotRegex(privacy, pattern)
+            for privacy in privacy_pages:
+                self.assertNotRegex(privacy, pattern)
         for pattern in (
             r"(?i)all payments are non-refundable|no refunds",
             r"(?i)no (?:consumer )?withdrawal right",
@@ -614,7 +678,8 @@ class ContactAndPolicyTests(unittest.TestCase):
             r"(?i)guaranteed (?:result|outcome|teacher|schedule)",
             r"(?i)automatic recurring billing|automatically billed",
         ):
-            self.assertNotRegex(terms, pattern)
+            for terms in terms_pages:
+                self.assertNotRegex(terms, pattern)
 
     def test_obsolete_disabled_form_honeypot_and_acknowledgement_styles_are_removed(self):
         css = (ROOT / "assets/css/styles.css").read_text(encoding="utf-8")

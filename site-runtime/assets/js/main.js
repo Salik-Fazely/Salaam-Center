@@ -1,6 +1,10 @@
 /* Salaam Center progressive enhancement. No dependencies. */
 
 document.addEventListener('DOMContentLoaded', () => {
+  const isDari = document.documentElement?.lang === 'fa-AF';
+  const navigationLabels = isDari
+    ? { open: 'باز کردن فهرست راهنما', close: 'بستن فهرست راهنما' }
+    : { open: 'Open navigation menu', close: 'Close navigation menu' };
   const cleanIndexPath = window.location.pathname.replace(/\/index\.html$/i, '/');
   if (cleanIndexPath !== window.location.pathname) {
     window.location.replace(`${cleanIndexPath}${window.location.search}${window.location.hash}`);
@@ -24,7 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
       navMenu.inert = isClosedMobile;
       navMenu.toggleAttribute('inert', isClosedMobile);
       navToggle.setAttribute('aria-expanded', String(isOpen));
-      navToggle.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+      navToggle.setAttribute('aria-label', isOpen ? navigationLabels.close : navigationLabels.open);
 
       if (isOpen && focusFirst) {
         navMenu.querySelector('a[href]')?.focus();

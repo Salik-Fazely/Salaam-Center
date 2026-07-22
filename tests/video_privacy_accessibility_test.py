@@ -7,9 +7,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 MAIN_JS = ROOT / "assets/js/main.js"
 STYLES = ROOT / "assets/css/styles.css"
-HOMEPAGE = ROOT / "index.html"
-TEACHERS = ROOT / "teachers/index.html"
-PRIVACY = ROOT / "privacy-policy/index.html"
+HOMEPAGE = ROOT / "en/index.html"
+TEACHERS = ROOT / "en/teachers/index.html"
+PRIVACY = ROOT / "en/privacy-policy/index.html"
 
 EXPECTED_VIDEO_IDS = {
     "to3h-qq7_FM",

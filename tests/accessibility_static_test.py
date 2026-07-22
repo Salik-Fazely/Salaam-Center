@@ -3,28 +3,13 @@ import unittest
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from scripts.deployment_boundary import PUBLIC_PAGE_SOURCES
+
 
 ROOT = Path(__file__).resolve().parents[1]
 STYLES = ROOT / "assets/css/styles.css"
 
-PUBLIC_PAGES = (
-    "404.html",
-    "index.html",
-    "our-approach/index.html",
-    "programs/index.html",
-    "programs/quran/index.html",
-    "programs/dari-persian/index.html",
-    "programs/afghan-culture-islamic-ethics/index.html",
-    "teachers/index.html",
-    "how-it-works/index.html",
-    "pricing/index.html",
-    "about/index.html",
-    "book-trial/index.html",
-    "contact/index.html",
-    "privacy-policy/index.html",
-    "terms/index.html",
-    "success/index.html",
-)
+PUBLIC_PAGES = PUBLIC_PAGE_SOURCES
 
 
 def source(relative_path):
@@ -63,9 +48,18 @@ class AccessibilityStaticTests(unittest.TestCase):
     def test_every_page_has_language_viewport_skip_link_and_main_landmark(self):
         for relative in PUBLIC_PAGES:
             page = source(relative)
-            self.assertRegex(page, r'<html\s+lang="en">', relative)
+            if relative.startswith("en/"):
+                self.assertIn('<html lang="en" dir="ltr">', page, relative)
+                skip_label = "Skip to main content"
+            else:
+                self.assertIn('<html lang="fa-AF" dir="rtl">', page, relative)
+                skip_label = "رفتن به محتوای اصلی"
             self.assertIn('name="viewport"', page, relative)
-            self.assertIn('<a class="skip-link" href="#main-content">Skip to main content</a>', page, relative)
+            self.assertIn(
+                f'<a class="skip-link" href="#main-content">{skip_label}</a>',
+                page,
+                relative,
+            )
             self.assertEqual(1, page.count('<main id="main-content">'), relative)
             self.assertEqual(1, page.count('</main>'), relative)
 
@@ -118,21 +112,25 @@ class AccessibilityStaticTests(unittest.TestCase):
                 self.assertTrue(local_target_exists(href), f"{relative}: unresolved {href}")
 
     def test_trial_page_has_an_accessible_client_side_whatsapp_handoff(self):
-        trial = source("book-trial/index.html")
-        self.assertIn('data-whatsapp-handoff="true"', trial)
-        self.assertIn('id="error-summary" role="alert" tabindex="-1" hidden', trial)
-        self.assertRegex(trial, r'<button[^>]+type="button"[^>]+data-whatsapp-submit')
-        self.assertNotRegex(trial, r'<form\b[^>]+action=')
-        self.assertNotRegex(trial, r'<form\b[^>]+method=["\']?post')
-        self.assertNotRegex(trial, r'<fieldset\b[^>]*\bdisabled\b')
-        self.assertIn("Continue in WhatsApp", trial)
-        self.assertIn('href="https://wa.me/34614401172"', trial)
-        for anchor in re.findall(r'<a\b[^>]*href="https://wa\.me/34614401172"[^>]*>', trial):
-            self.assertIn('target="_blank"', anchor)
-            self.assertIn('rel="noopener noreferrer"', anchor)
+        for relative, button_label in (
+            ("book-trial/index.html", "ادامه در واتس‌اپ"),
+            ("en/book-trial/index.html", "Continue in WhatsApp"),
+        ):
+            trial = source(relative)
+            self.assertIn('data-whatsapp-handoff="true"', trial)
+            self.assertIn('id="error-summary" role="alert" tabindex="-1" hidden', trial)
+            self.assertRegex(trial, r'<button[^>]+type="button"[^>]+data-whatsapp-submit')
+            self.assertNotRegex(trial, r'<form\b[^>]+action=')
+            self.assertNotRegex(trial, r'<form\b[^>]+method=["\']?post')
+            self.assertNotRegex(trial, r'<fieldset\b[^>]*\bdisabled\b')
+            self.assertIn(button_label, trial)
+            self.assertIn('href="https://wa.me/34614401172"', trial)
+            for anchor in re.findall(r'<a\b[^>]*href="https://wa\.me/34614401172"[^>]*>', trial):
+                self.assertIn('target="_blank"', anchor)
+                self.assertIn('rel="noopener noreferrer"', anchor)
 
     def test_pricing_disclosures_are_native_and_pricing_has_no_commercial_controls(self):
-        pricing = source("pricing/index.html")
+        pricing = source("en/pricing/index.html")
         main = re.search(r'<main id="main-content">.*?</main>', pricing, re.S).group(0)
         self.assertEqual(11, pricing.count("<details"))
         self.assertEqual(11, pricing.count("<summary>"))

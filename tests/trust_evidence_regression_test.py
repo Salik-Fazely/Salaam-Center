@@ -1149,15 +1149,12 @@ class RepositoryTrustEvidenceTests(unittest.TestCase):
                 "docs/COMMERCIAL-AND-ENROLMENT.md",
             ):
                 (root / relative).write_text("documentation", encoding="utf-8")
-            for relative in (
-                "robots.txt",
-                "sitemap.xml",
-                "assets/css/styles.css",
-                "assets/js/main.js",
-                "assets/js/trial-form.js",
-                "assets/logo/salaam-center-favicon.svg",
-            ):
-                (root / relative).write_text("", encoding="utf-8")
+            for source_path, _ in public_backing_pairs():
+                target = root / source_path
+                if target.exists():
+                    continue
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b"wOF2fixture" if target.suffix == ".woff2" else b"")
             (root / "config/launch-readiness.json").write_text(
                 '{"site_mode":"prelaunch"}',
                 encoding="utf-8",
@@ -1245,25 +1242,10 @@ class RepositoryTrustEvidenceTests(unittest.TestCase):
             list(report.failures),
             "\n".join(format_finding(item, ROOT) for item in report.failures),
         )
+        from scripts.deployment_boundary import PUBLIC_PAGE_SOURCES
+
         self.assertEqual(
-            tuple(ROOT / path for path in (
-                "index.html",
-                "our-approach/index.html",
-                "programs/index.html",
-                "programs/quran/index.html",
-                "programs/dari-persian/index.html",
-                "programs/afghan-culture-islamic-ethics/index.html",
-                "teachers/index.html",
-                "how-it-works/index.html",
-                "pricing/index.html",
-                "about/index.html",
-                "book-trial/index.html",
-                "contact/index.html",
-                "privacy-policy/index.html",
-                "terms/index.html",
-                "success/index.html",
-                "404.html",
-            )),
+            tuple(ROOT / path for path in PUBLIC_PAGE_SOURCES),
             report.public_html_paths,
         )
         self.assertEqual(
@@ -1327,8 +1309,8 @@ class RepositoryTrustEvidenceTests(unittest.TestCase):
                 scan_repository(root, (str(outside_path),))
 
     def test_all_approved_teacher_and_student_evidence_remain(self):
-        homepage = (ROOT / "index.html").read_text(encoding="utf-8")
-        teachers = (ROOT / "teachers/index.html").read_text(encoding="utf-8")
+        homepage = (ROOT / "en/index.html").read_text(encoding="utf-8")
+        teachers = (ROOT / "en/teachers/index.html").read_text(encoding="utf-8")
         script = (ROOT / "assets/js/main.js").read_text(encoding="utf-8")
         styles = (ROOT / "assets/css/styles.css").read_text(encoding="utf-8")
 

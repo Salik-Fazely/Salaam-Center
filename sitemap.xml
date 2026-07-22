@@ -1,17 +1,172 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://salaam.center/</loc></url>
-  <url><loc>https://salaam.center/about/</loc></url>
-  <url><loc>https://salaam.center/book-trial/</loc></url>
-  <url><loc>https://salaam.center/contact/</loc></url>
-  <url><loc>https://salaam.center/how-it-works/</loc></url>
-  <url><loc>https://salaam.center/our-approach/</loc></url>
-  <url><loc>https://salaam.center/pricing/</loc></url>
-  <url><loc>https://salaam.center/privacy-policy/</loc></url>
-  <url><loc>https://salaam.center/programs/</loc></url>
-  <url><loc>https://salaam.center/programs/afghan-culture-islamic-ethics/</loc></url>
-  <url><loc>https://salaam.center/programs/dari-persian/</loc></url>
-  <url><loc>https://salaam.center/programs/quran/</loc></url>
-  <url><loc>https://salaam.center/teachers/</loc></url>
-  <url><loc>https://salaam.center/terms/</loc></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://salaam.center/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/our-approach/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/our-approach/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/our-approach/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/our-approach/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/our-approach/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/our-approach/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/our-approach/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/our-approach/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/programs/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/programs/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/programs/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/programs/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/programs/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/programs/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/programs/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/programs/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/programs/quran/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/programs/quran/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/programs/quran/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/programs/quran/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/programs/quran/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/programs/quran/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/programs/quran/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/programs/quran/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/programs/dari-persian/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/programs/dari-persian/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/programs/dari-persian/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/programs/dari-persian/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/programs/dari-persian/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/programs/dari-persian/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/programs/dari-persian/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/programs/dari-persian/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/programs/afghan-culture-islamic-ethics/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/programs/afghan-culture-islamic-ethics/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/programs/afghan-culture-islamic-ethics/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/programs/afghan-culture-islamic-ethics/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/programs/afghan-culture-islamic-ethics/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/programs/afghan-culture-islamic-ethics/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/programs/afghan-culture-islamic-ethics/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/programs/afghan-culture-islamic-ethics/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/teachers/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/teachers/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/teachers/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/teachers/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/teachers/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/teachers/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/teachers/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/teachers/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/how-it-works/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/how-it-works/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/how-it-works/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/how-it-works/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/how-it-works/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/how-it-works/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/how-it-works/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/how-it-works/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/pricing/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/pricing/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/pricing/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/pricing/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/pricing/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/pricing/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/pricing/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/pricing/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/about/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/about/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/about/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/about/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/about/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/about/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/about/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/about/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/book-trial/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/book-trial/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/book-trial/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/book-trial/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/book-trial/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/book-trial/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/book-trial/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/book-trial/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/contact/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/contact/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/contact/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/contact/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/contact/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/contact/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/contact/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/contact/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/privacy-policy/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/privacy-policy/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/privacy-policy/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/privacy-policy/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/privacy-policy/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/privacy-policy/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/privacy-policy/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/privacy-policy/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/terms/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/terms/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/terms/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/terms/" />
+  </url>
+  <url>
+    <loc>https://salaam.center/en/terms/</loc>
+    <xhtml:link rel="alternate" hreflang="fa-AF" href="https://salaam.center/terms/" />
+    <xhtml:link rel="alternate" hreflang="en" href="https://salaam.center/en/terms/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://salaam.center/terms/" />
+  </url>
 </urlset>

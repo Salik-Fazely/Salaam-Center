@@ -1,18 +1,28 @@
 # Salaam Center Approved Facts
 
-This document is the concise source of truth for the Salaam Center English production website. Anything reserved for a later operational phase must not be guessed or published as a current promise.
+This document is the concise source of truth for the bilingual Salaam Center production website. Anything reserved for a later operational phase must not be guessed or published as a current promise.
 
 ## 1. Approved brand facts
 
 - Brand name: **Salaam Center**
 - Production origin: `https://salaam.center`
 - Market category: online Afghan heritage education platform
-- Launch language: English
-- Future language phase: Dari/Persian with proper RTL support, not part of this launch
+- Default language: Afghan Dari at root routes, using `fa-AF` and RTL
+- English language: the approved English site under `/en/`, using `en` and LTR
 - Main message: **Help your child stay connected to their language, faith, and Afghan heritage.**
 - Core belief: children should not have to lose their heritage simply because they grow up outside Afghanistan.
 
 The production origin is `https://salaam.center`; `https://www.salaam.center` is also an active production domain. Cloudflare Pages project `salaam-center`, deployed automatically from GitHub `main`, is the production hosting source of truth. `salaamcenter.org` is not an approved domain.
+
+### Approved bilingual architecture
+
+- Root routes contain the Afghan Dari translation; equivalent English routes live under `/en/`.
+- Visitors control the normal-anchor language switcher. There is no automatic redirect, language cookie or language storage.
+- Every switch preserves the equivalent route. Canonicals are self-referencing and language-specific; reciprocal `fa-AF`/`en` hreflang is present, and `x-default` points to Dari.
+- Dari pages are RTL and use the self-hosted official Vazirmatn variable font. English pages remain LTR and retain the approved English typography.
+- Prepared WhatsApp messages follow the page language while retaining the exact number and client-side, deliberate-send architecture.
+- The sitemap contains 28 indexable localized URLs. Both Success pages and both 404 templates remain excluded and `noindex, nofollow`.
+- Search Console submission remains a separate manual task. No DNS or Cloudflare setting change is required for this architecture.
 
 ## 2. Approved positioning
 
@@ -202,7 +212,7 @@ Salaam Center is approved for production indexing. Privacy Policy is approved, T
 - **Initial contact channel** — WhatsApp is approved and active; its live-link, receive-and-reply flow has been manually verified on the approved mobile and WhatsApp Web/desktop surfaces
 - **Website handoff** — the client-side message preparation is active and intentionally has no form backend, database or automatic messaging
 - **Analytics** — production launch is approved with no analytics or advertising pixels; any future analytics proposal requires separate approval and privacy review
-- **Production SEO** — indexing is enabled for the 14 intended canonical pages; Success and 404 retain `noindex, nofollow`; the sitemap is available but has not been submitted manually; Search Console is not enabled
+- **Production SEO** — indexing is enabled for the 28 intended localized canonical pages; both Success pages and both 404 templates retain `noindex, nofollow`; the sitemap is available but has not been submitted manually; Search Console is not enabled
 - **Deployment** — approved on Cloudflare Pages from GitHub `main`, with the apex and `www` domains and HTTPS active
 
 Teacher-compensation review is resolved for current production pricing. Payment-provider fees, tax and accounting treatment, administrative cost, marketing and acquisition cost, refund and chargeback exposure, consumer-law implementation and the Final minimum net-margin policy remain future operational considerations; they do not authorize a payment integration and do not reverse the website's production-indexing approval.
@@ -308,7 +318,7 @@ Deployment is approved for production indexing under the final legal wording. Se
 
 ## 16. Production indexing rule
 
-The 14 intended canonical content pages are indexable and included in `sitemap.xml`. The Success page and the root 404 page are deliberately excluded from the sitemap and must retain the exact `noindex, nofollow` directive. Production `robots.txt` allows crawling and points to `https://salaam.center/sitemap.xml`. Direct `site-runtime/` and repository-only paths remain outside the public route allowlist and return HTTP 404.
+The 28 intended localized canonical content pages are indexable and included in `sitemap.xml`. The Dari and English Success pages and 404 templates are deliberately excluded from the sitemap and must retain the exact `noindex, nofollow` directive. Production `robots.txt` allows both language trees to be crawled and points to `https://salaam.center/sitemap.xml`. Direct `site-runtime/` and repository-only paths remain outside the public route allowlist and return HTTP 404.
 
 ## 17. Production launch-readiness decisions
 
@@ -342,7 +352,7 @@ The trial form must not collect any email address, learner name or surname, chil
 ### Production readiness status
 
 - Legal approval is complete for operator **Salaam Center**, correspondence address **Sabadell, Barcelona**, effective date **22 July 2026**, and the final Privacy Policy and Terms.
-- Indexing is enabled for the 14 intended canonical pages. Success and 404 retain `noindex, nofollow`, and production `robots.txt` references the canonical sitemap.
+- Indexing is enabled for the 28 intended localized canonical pages. Both Success pages and both 404 templates retain `noindex, nofollow`, and production `robots.txt` references the canonical bilingual sitemap.
 - The manual WhatsApp test is complete for the approved Business profile and click-to-chat link on Android or iPhone and WhatsApp Web/desktop, including message receiving and replies. `whatsapp_live_link_tested` is `true`.
 - The sitemap is available but has not been submitted manually. Search Console remains disabled and has no verification or integration in the repository.
 - GitHub Pages, a repository CNAME, Formspree, domain email, analytics, advertising pixels, a backend and payment integration remain deliberately outside the approved architecture.

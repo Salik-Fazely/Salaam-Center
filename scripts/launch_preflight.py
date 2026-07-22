@@ -13,42 +13,66 @@ from pathlib import Path
 sys.dont_write_bytecode = True
 
 try:
-    from scripts.deployment_boundary import deployment_boundary_is_safe
+    from scripts.deployment_boundary import (
+        PUBLIC_PAGE_SOURCES,
+        deployment_boundary_is_safe,
+    )
+    from scripts.localized_routes import (
+        LANGUAGE_KEYS,
+        load_localized_routes,
+        source_path_for_public_path,
+    )
 except ModuleNotFoundError:  # Support direct execution outside the repository cwd.
-    from deployment_boundary import deployment_boundary_is_safe
+    from deployment_boundary import PUBLIC_PAGE_SOURCES, deployment_boundary_is_safe
+    from localized_routes import (
+        LANGUAGE_KEYS,
+        load_localized_routes,
+        source_path_for_public_path,
+    )
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = ROOT / "config/launch-readiness.json"
-PUBLIC_PAGES = (
-    "index.html", "our-approach/index.html", "programs/index.html",
-    "programs/quran/index.html", "programs/dari-persian/index.html",
-    "programs/afghan-culture-islamic-ethics/index.html", "teachers/index.html",
-    "how-it-works/index.html", "pricing/index.html", "about/index.html",
-    "book-trial/index.html", "contact/index.html", "privacy-policy/index.html",
-    "terms/index.html", "success/index.html", "404.html",
+LOCALIZED_ROUTES = load_localized_routes(ROOT)
+PUBLIC_PAGES = PUBLIC_PAGE_SOURCES
+ROUTES = {
+    source_path_for_public_path(route.public_path(language)): route.public_path(language)
+    for route in LOCALIZED_ROUTES
+    for language in LANGUAGE_KEYS
+}
+NOINDEX_PAGES = tuple(
+    source_path_for_public_path(route.public_path(language))
+    for route in LOCALIZED_ROUTES
+    if not route.indexable
+    for language in LANGUAGE_KEYS
 )
-NOINDEX_PAGES = ("success/index.html", "404.html")
-INDEXABLE_PAGES = tuple(page for page in PUBLIC_PAGES if page not in NOINDEX_PAGES)
+INDEXABLE_PAGES = tuple(
+    source_path_for_public_path(route.public_path(language))
+    for route in LOCALIZED_ROUTES
+    if route.indexable
+    for language in LANGUAGE_KEYS
+)
 PRODUCTION_ORIGIN = "https://salaam.center"
 PRODUCTION_DOMAINS = ["salaam.center", "www.salaam.center"]
 APPROVED_WHATSAPP_NUMBER = "34614401172"
 WHATSAPP_URL = f"https://wa.me/{APPROVED_WHATSAPP_NUMBER}"
 LEGAL_CONTROLLER_NAME = "Salaam Center"
 LEGAL_CONTROLLER_ADDRESS = "Sabadell, Barcelona"
-ROUTES = {
-    "index.html": "/",
-    "404.html": "/404.html",
-    **{
-        path: f"/{path.removesuffix('index.html')}"
-        for path in PUBLIC_PAGES
-        if path not in {"index.html", "404.html"}
-    },
-}
 SITEMAP_URLS = {
-    PRODUCTION_ORIGIN + route
-    for path, route in ROUTES.items()
-    if path not in {"success/index.html", "404.html"}
+    PRODUCTION_ORIGIN + route.public_path(language)
+    for route in LOCALIZED_ROUTES
+    if route.sitemap
+    for language in LANGUAGE_KEYS
+}
+SITEMAP_ALTERNATES = {
+    PRODUCTION_ORIGIN + route.public_path(language): (
+        ("fa-AF", PRODUCTION_ORIGIN + route.fa_AF),
+        ("en", PRODUCTION_ORIGIN + route.en),
+        ("x-default", PRODUCTION_ORIGIN + route.fa_AF),
+    )
+    for route in LOCALIZED_ROUTES
+    if route.sitemap
+    for language in LANGUAGE_KEYS
 }
 PROTECTED_NAMES = ("Farkhonda Jami", "Foruhar Rahmani", "Fareshta Suroush", "Sadiah Hamid")
 PROTECTED_VIDEO_IDS = (
@@ -181,6 +205,7 @@ class HeadDirectiveParser(HTMLParser):
         super().__init__(convert_charrefs=True)
         self.canonicals: list[str] = []
         self.robots: list[str] = []
+        self.alternates: list[tuple[str, str]] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attributes = {
@@ -194,6 +219,10 @@ class HeadDirectiveParser(HTMLParser):
             }
             if "canonical" in relationships:
                 self.canonicals.append(attributes.get("href", ""))
+            if "alternate" in relationships and attributes.get("hreflang"):
+                self.alternates.append(
+                    (attributes.get("hreflang", ""), attributes.get("href", ""))
+                )
         elif (
             tag.casefold() == "meta"
             and attributes.get("name", "").strip().casefold() == "robots"
@@ -236,6 +265,85 @@ def canonicals_are_exact(source: dict[str, str]) -> bool:
     for relative in PUBLIC_PAGES:
         expected = PRODUCTION_ORIGIN + ROUTES[relative]
         if head_directives(source.get(relative, "")).canonicals != [expected]:
+            return False
+    return True
+
+
+def bilingual_documents_are_exact(source: dict[str, str]) -> bool:
+    for route in LOCALIZED_ROUTES:
+        for language in LANGUAGE_KEYS:
+            relative = source_path_for_public_path(route.public_path(language))
+            markup = source.get(relative, "")
+            expected = (
+                '<html lang="fa-AF" dir="rtl">'
+                if language == "fa_AF"
+                else '<html lang="en" dir="ltr">'
+            )
+            if expected not in markup:
+                return False
+    return True
+
+
+def bilingual_links_are_exact(source: dict[str, str]) -> bool:
+    forbidden_dari_interface = (
+        ">Home<",
+        ">Programs<",
+        ">Book a Free Trial<",
+        ">Skip to main content<",
+    )
+    for route in LOCALIZED_ROUTES:
+        expected_alternates = [
+            ("fa-AF", PRODUCTION_ORIGIN + route.fa_AF),
+            ("en", PRODUCTION_ORIGIN + route.en),
+            ("x-default", PRODUCTION_ORIGIN + route.fa_AF),
+        ]
+        for language in LANGUAGE_KEYS:
+            public_path = route.public_path(language)
+            counterpart = route.en if language == "fa_AF" else route.fa_AF
+            relative = source_path_for_public_path(public_path)
+            markup = source.get(relative, "")
+            directives = head_directives(markup)
+            if directives.alternates != expected_alternates:
+                return False
+            if markup.count("data-language-switch") != 2:
+                return False
+            if markup.count(f'href="{counterpart}" data-language-switch') != 2:
+                return False
+            if language == "fa_AF" and any(
+                label in markup for label in forbidden_dari_interface
+            ):
+                return False
+    return True
+
+
+def local_dari_font_is_exact(source: dict[str, str]) -> bool:
+    font_path = ROOT / "assets/fonts/vazirmatn/Vazirmatn-Variable.woff2"
+    license_path = ROOT / "assets/fonts/vazirmatn/OFL.txt"
+    css_path = ROOT / "assets/css/styles.css"
+    try:
+        font = font_path.read_bytes()
+        license_text = license_path.read_text(encoding="utf-8")
+        css = css_path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    preload = (
+        '<link rel="preload" href="/assets/fonts/vazirmatn/'
+        'Vazirmatn-Variable.woff2" as="font" type="font/woff2" crossorigin />'
+    )
+    if (
+        not font.startswith(b"wOF2")
+        or "SIL OPEN FONT LICENSE Version 1.1" not in license_text
+        or 'font-family: "Vazirmatn"' not in css
+        or 'font-weight: 100 900' not in css
+        or 'font-display: swap' not in css
+        or '/assets/fonts/vazirmatn/Vazirmatn-Variable.woff2' not in css
+        or re.search(r"fonts\.(?:googleapis|gstatic)\.com|@import\s+url\(['\"]?https?://", css, re.I)
+    ):
+        return False
+    for route in LOCALIZED_ROUTES:
+        dari = source.get(source_path_for_public_path(route.fa_AF), "")
+        english = source.get(source_path_for_public_path(route.en), "")
+        if dari.count(preload) != 1 or preload in english:
             return False
     return True
 
@@ -286,7 +394,14 @@ def github_pages_workflow_exists() -> bool:
 def whatsapp_links_are_valid(source: dict[str, str], script: str, number: object) -> bool:
     if not valid_whatsapp_number(number):
         return False
-    required_pages = ("book-trial/index.html", "contact/index.html", "success/index.html")
+    required_pages = (
+        "book-trial/index.html",
+        "contact/index.html",
+        "success/index.html",
+        "en/book-trial/index.html",
+        "en/contact/index.html",
+        "en/success/index.html",
+    )
     if not all(f'href="{WHATSAPP_URL}"' in source.get(page, "") for page in required_pages):
         return False
     joined = "\n".join(source.values()) + "\n" + script
@@ -301,7 +416,7 @@ def whatsapp_links_are_valid(source: dict[str, str], script: str, number: object
     )
 
 
-def client_handoff_is_safe(trial: str, script: str) -> bool:
+def client_handoff_is_safe(trial: str, script: str, button_label: str) -> bool:
     form_match = re.search(r"<form\b.*?</form>", trial, re.S | re.I)
     if not form_match:
         return False
@@ -325,7 +440,7 @@ def client_handoff_is_safe(trial: str, script: str) -> bool:
         and re.search(r"\bmethod\s*=\s*['\"]?post", form, re.I) is None
         and re.search(r"type=['\"]submit['\"]", form, re.I) is None
         and re.search(r"type=['\"]button['\"][^>]*data-whatsapp-submit", form, re.I) is not None
-        and "Continue in WhatsApp" in form
+        and button_label in form
         and forbidden_fields.search(form) is None
         and f'href="{WHATSAPP_URL}"' in trial
         and script_safe
@@ -334,17 +449,31 @@ def client_handoff_is_safe(trial: str, script: str) -> bool:
     )
 
 
-def success_page_is_truthful(success: str) -> bool:
+def success_page_is_truthful(success: str, language: str = "en") -> bool:
     folded = success.casefold()
-    return (
-        "continue your conversation in whatsapp" in folded
-        and "cannot confirm" in folded
-        and re.search(r"\bpress(?:ed)? send\b", folded) is not None
-        and "not booked until salaam center confirms" in folded
-        and f'href="{WHATSAPP_URL}"' in success
+    common = (
+        f'href="{WHATSAPP_URL}"' in success
         and "data-success-state" not in folded
         and "trial-form.js" not in folded
         and FALSE_SUCCESS_RE.search(success) is None
+    )
+    if language == "fa-AF":
+        return common and all(
+            phrase in success
+            for phrase in (
+                "گفت‌وگوی خود را در واتس‌اپ ادامه دهید",
+                "نمی‌تواند تأیید کند",
+                "دکمهٔ ارسال",
+                "رزرو نشده است",
+                "استاد و زمان را تأیید",
+            )
+        )
+    return (
+        common
+        and "continue your conversation in whatsapp" in folded
+        and "cannot confirm" in folded
+        and re.search(r"\bpress(?:ed)? send\b", folded) is not None
+        and "not booked until salaam center confirms" in folded
     )
 
 
@@ -366,6 +495,7 @@ def sitemap_is_valid() -> bool:
     except ET.ParseError:
         return False
     namespace = "http://www.sitemaps.org/schemas/sitemap/0.9"
+    xhtml_namespace = "http://www.w3.org/1999/xhtml"
     if (
         root.tag != f"{{{namespace}}}urlset"
         or root.attrib
@@ -378,7 +508,7 @@ def sitemap_is_valid() -> bool:
         if (
             url.tag != f"{{{namespace}}}url"
             or url.attrib
-            or len(children) != 1
+            or len(children) != 4
             or children[0].tag != f"{{{namespace}}}loc"
             or children[0].attrib
             or list(children[0])
@@ -389,6 +519,23 @@ def sitemap_is_valid() -> bool:
             return False
         location = children[0].text or ""
         if location != location.strip():
+            return False
+        expected_alternates = SITEMAP_ALTERNATES.get(location)
+        actual_alternates = []
+        for link in children[1:]:
+            if (
+                link.tag != f"{{{xhtml_namespace}}}link"
+                or list(link)
+                or (link.text and link.text.strip())
+                or (link.tail and link.tail.strip())
+                or set(link.attrib) != {"rel", "hreflang", "href"}
+                or link.attrib["rel"] != "alternate"
+            ):
+                return False
+            actual_alternates.append(
+                (link.attrib["hreflang"], link.attrib["href"])
+            )
+        if expected_alternates is None or tuple(actual_alternates) != expected_alternates:
             return False
         locations.append(location)
     return (
@@ -404,7 +551,7 @@ def common_safety_checks(result: Result, config: dict, source: dict[str, str]) -
     handoff_script = trial_form_source()
     public_surface = public_surface_source(source, script)
     deployment_safe = deployment_boundary_is_safe(ROOT, PUBLIC_PAGES)
-    result.require(all(source.values()), "all 16 public HTML pages exist")
+    result.require(all(source.values()), "all 32 bilingual public HTML pages exist")
     result.require(config.get("production_origin") == PRODUCTION_ORIGIN, "production_origin is https://salaam.center")
     result.require(config.get("production_domains") == PRODUCTION_DOMAINS, "production domains are exact")
     result.require(config.get("hosting_source") == "cloudflare_pages", "hosting source is Cloudflare Pages")
@@ -449,15 +596,39 @@ def common_safety_checks(result: Result, config: dict, source: dict[str, str]) -
     )
     result.require(STORAGE_RE.search(script) is None, "no personal-data storage")
     result.require(whatsapp_links_are_valid(source, script, config.get("whatsapp_number")), "exact safe wa.me links")
-    result.require(client_handoff_is_safe(source.get("book-trial/index.html", ""), handoff_script), "safe client-side WhatsApp handoff")
-    result.require(success_page_is_truthful(source.get("success/index.html", "")), "Success page remains truthful")
+    result.require(
+        client_handoff_is_safe(
+            source.get("book-trial/index.html", ""),
+            handoff_script,
+            "ادامه در واتس‌اپ",
+        )
+        and client_handoff_is_safe(
+            source.get("en/book-trial/index.html", ""),
+            handoff_script,
+            "Continue in WhatsApp",
+        ),
+        "both client-side WhatsApp handoffs are safe",
+    )
+    result.require(
+        success_page_is_truthful(source.get("success/index.html", ""), "fa-AF")
+        and success_page_is_truthful(source.get("en/success/index.html", "")),
+        "both Success pages remain truthful",
+    )
     result.require(not ANALYTICS_RE.search(public_surface), "no analytics or advertising pixels")
     result.require(not PAYMENT_RE.search(public_surface), "no payment integration")
     result.require(not SEARCH_CONSOLE_RE.search(public_surface), "no Search Console verification")
     result.require(all(name in public_joined for name in PROTECTED_NAMES), "all protected teacher content remains")
     result.require(all(video_id in public_joined for video_id in PROTECTED_VIDEO_IDS), "all protected teacher and student video IDs remain")
-    pricing = source.get("pricing/index.html", "")
-    result.require(all(price in pricing for price in APPROVED_PRICES), "public prices remain approved")
+    english_pricing = source.get("en/pricing/index.html", "")
+    dari_pricing = source.get("pricing/index.html", "")
+    result.require(
+        all(price in english_pricing for price in APPROVED_PRICES)
+        and all(
+            f'<bdi dir="ltr">€{price}</bdi>' in dari_pricing
+            for price in ("49", "69", "99", "119", "129", "229")
+        ),
+        "both languages retain all six approved prices",
+    )
     result.require(
         ECONOMICS_LEAK_RE.search(public_surface) is None,
         "no internal teacher-cost information is served by the website",
@@ -522,9 +693,35 @@ def production(
         "privacy_policy_final_approved is true": config.get("privacy_policy_final_approved") is True,
         "terms_final_approved is true": config.get("terms_final_approved") is True,
         "whatsapp_live_link_tested is true": config.get("whatsapp_live_link_tested") is True,
+        "Dari is the default language": config.get("default_language") == "fa-AF",
+        "supported languages are exact": config.get("supported_languages") == ["fa-AF", "en"],
+        "English path prefix is /en": config.get("english_path_prefix") == "/en",
+        "automatic language redirect is disabled": config.get("automatic_language_redirect") is False,
+        "Dari direction is RTL": config.get("dari_direction") == "rtl",
+        "English direction is LTR": config.get("english_direction") == "ltr",
+        "Dari font is Vazirmatn": config.get("dari_font") == "Vazirmatn",
+        "localized route pairs are verified": config.get("localized_route_pairs_verified") is True,
+        "hreflang is verified": config.get("hreflang_verified") is True,
+        "bilingual sitemap is verified": config.get("bilingual_sitemap_verified") is True,
     }
     for label, condition in requirements.items():
         result.require(condition, label)
+    result.require(
+        len(LOCALIZED_ROUTES) == 16 and len(INDEXABLE_PAGES) == 28,
+        "16 exact route pairs provide 28 indexable pages",
+    )
+    result.require(
+        bilingual_documents_are_exact(source),
+        "Dari root and English /en/ documents have exact lang and dir",
+    )
+    result.require(
+        bilingual_links_are_exact(source),
+        "route counterparts, switchers, hreflang and x-default are exact",
+    )
+    result.require(
+        local_dari_font_is_exact(source),
+        "official local Vazirmatn font and licence are available without a font CDN",
+    )
     result.require(
         all(not has_noindex(source.get(page, "")) for page in INDEXABLE_PAGES),
         "intended indexable pages have no noindex directive",

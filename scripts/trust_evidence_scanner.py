@@ -13,29 +13,12 @@ from urllib.parse import unquote, urlsplit
 sys.dont_write_bytecode = True
 
 try:
-    from scripts.deployment_boundary import deployment_boundary_errors
+    from scripts.deployment_boundary import PUBLIC_PAGE_SOURCES, deployment_boundary_errors
 except ModuleNotFoundError:  # Support direct execution outside the repository cwd.
-    from deployment_boundary import deployment_boundary_errors
+    from deployment_boundary import PUBLIC_PAGE_SOURCES, deployment_boundary_errors
 
 
-PUBLIC_HTML_PATHS = (
-    "index.html",
-    "our-approach/index.html",
-    "programs/index.html",
-    "programs/quran/index.html",
-    "programs/dari-persian/index.html",
-    "programs/afghan-culture-islamic-ethics/index.html",
-    "teachers/index.html",
-    "how-it-works/index.html",
-    "pricing/index.html",
-    "about/index.html",
-    "book-trial/index.html",
-    "contact/index.html",
-    "privacy-policy/index.html",
-    "terms/index.html",
-    "success/index.html",
-    "404.html",
-)
+PUBLIC_HTML_PATHS = PUBLIC_PAGE_SOURCES
 
 DOCUMENTATION_PATHS = frozenset({
     "SALAM-CENTER-APPROVED-FACTS.md",
@@ -163,10 +146,24 @@ APPROVED_CERTIFICATE_EVIDENCE = (
     "It is not an academic accreditation, qualification or government-recognised certificate.",
 )
 
+APPROVED_CERTIFICATE_EVIDENCE_FA_AF = (
+    "تصدیق‌نامهٔ دیجیتالی تکمیل برای شاگردان واجد شرایط برنامهٔ 12 هفته‌ای",
+    "دست‌کم 80% صنف‌های پولی برنامه‌ریزی‌شده باید تکمیل شود.",
+    "هرگونه مکلفیت پرداخت‌نشده باید حل شود.",
+    "این تصدیق‌نامه اشتراک و تکمیل برنامه را تأیید می‌کند.",
+    "این سند اعتباردهی تحصیلی، مدرک یا تصدیق‌نامهٔ به‌رسمیت‌شناخته‌شده از سوی دولت نیست.",
+)
+
 APPROVED_TERMS_PLAN_EVIDENCE = tuple(
     f"{weeks}-week plan, {frequency} "
     f"{'class' if frequency == 1 else 'classes'} per week: "
     f"{classes} paid classes, €{price} total."
+    for weeks, frequency, classes, price, _ in APPROVED_PRIVATE_PLAN_EVIDENCE
+)
+
+APPROVED_TERMS_PLAN_EVIDENCE_FA_AF = tuple(
+    f"برنامهٔ {weeks} هفته‌ای، {frequency} صنف در هفته: "
+    f"{classes} صنف پولی، مجموع €{price}."
     for weeks, frequency, classes, price, _ in APPROVED_PRIVATE_PLAN_EVIDENCE
 )
 
@@ -1204,6 +1201,12 @@ class _PublicHTMLParser(HTMLParser):
         self.links: list[tuple[int, str]] = []
         self.visible = _MappedTextBuilder()
         self._relative_path = relative_path
+        self._approval_path = (
+            relative_path.removeprefix("en/")
+            if relative_path.startswith("en/")
+            else relative_path
+        )
+        self._language = "en"
         self._in_head = False
         self._in_title = False
         self._script_surface: SurfaceType | None = None
@@ -1217,6 +1220,8 @@ class _PublicHTMLParser(HTMLParser):
         normalized_tag = tag.lower()
         line, _ = self.getpos()
         attributes = {name.lower(): value or "" for name, value in attrs}
+        if normalized_tag == "html" and attributes.get("lang"):
+            self._language = attributes["lang"].casefold()
         if not self._in_head:
             self._add_executable_attributes(attrs)
 
@@ -1247,7 +1252,7 @@ class _PublicHTMLParser(HTMLParser):
         if (
             not self._in_head
             and normalized_tag == "section"
-            and self._relative_path == "terms/index.html"
+            and self._approval_path == "terms/index.html"
         ):
             self._terms_section_starts.append(len(self.visible))
 
@@ -1259,7 +1264,7 @@ class _PublicHTMLParser(HTMLParser):
         elif self._evidence_card is None and normalized_tag in ("article", "section", "div"):
             classes = frozenset(attributes.get("class", "").split())
             kind = "confirmed-success" if (
-                self._relative_path == "success/index.html"
+                self._approval_path == "success/index.html"
                 and attributes.get("data-success-state") == "confirmed"
                 and "hidden" in attributes
             ) else next(
@@ -1344,7 +1349,7 @@ class _PublicHTMLParser(HTMLParser):
                 self._evidence_card = None
         if (
             normalized_tag == "section"
-            and self._relative_path == "terms/index.html"
+            and self._approval_path == "terms/index.html"
             and self._terms_section_starts
         ):
             self._protect_approved_terms_plan_matrix(
@@ -1415,7 +1420,7 @@ class _PublicHTMLParser(HTMLParser):
     def _protect_approved_card(self, card: _EvidenceCard, end: int) -> None:
         card_text = self.visible.text[card.start:end]
         attributes = " ".join(card.attribute_values)
-        if card.kind == "teacher-card" and self._relative_path in _APPROVED_TEACHER_PATHS:
+        if card.kind == "teacher-card" and self._approval_path in _APPROVED_TEACHER_PATHS:
             matches = [
                 evidence
                 for evidence in APPROVED_TEACHER_EVIDENCE
@@ -1427,7 +1432,7 @@ class _PublicHTMLParser(HTMLParser):
                 self.visible.protect(matches[0][1], card.start, end)
         elif (
             card.kind == "feedback-video-card"
-            and self._relative_path in _APPROVED_STUDENT_PATHS
+            and self._approval_path in _APPROVED_STUDENT_PATHS
         ):
             matches = [
                 evidence
@@ -1436,7 +1441,7 @@ class _PublicHTMLParser(HTMLParser):
             ]
             if len(matches) == 1:
                 self.visible.protect(matches[0][1], card.start, end)
-        elif card.kind == "pricing-card" and self._relative_path == "pricing/index.html":
+        elif card.kind == "pricing-card" and self._approval_path == "pricing/index.html":
             matches = []
             for weeks, frequency, classes, price, saving in APPROVED_PRIVATE_PLAN_EVIDENCE:
                 expected_attributes = {
@@ -1449,77 +1454,138 @@ class _PublicHTMLParser(HTMLParser):
                     expected_attributes["data-saving-eur"] = str(saving)
                 elif card.attributes.get("data-saving-eur"):
                     continue
-                frequency_text = (
-                    "1 class per week"
-                    if frequency == 1
-                    else f"{frequency} classes per week"
-                )
-                validity = (
-                    "6-week final validity"
-                    if weeks == 4
-                    else "16-week final validity"
-                )
-                expected_text = (
-                    frequency_text,
-                    f"{classes} paid classes",
-                    "40 minutes each",
-                    f"€{price} total",
-                    "Private Quran or Dari/Persian",
-                    "One learner",
-                    "One selected program",
-                    f"{weeks}-week teaching period",
-                    validity,
-                    "Does not renew automatically",
-                    "Start with a Free Trial",
-                )
-                if all(card.attributes.get(key) == value for key, value in expected_attributes.items()) and all(
-                    value in card_text for value in expected_text
-                ):
-                    if saving is None or (
+                if self._language == "fa-af":
+                    expected_text = (
+                        f"{frequency} صنف در هفته",
+                        f"{classes} صنف پولی",
+                        "هر کدام 40 دقیقه",
+                        f"€{price}",
+                        "قرآن یا دری خصوصی",
+                        "یک شاگرد",
+                        "یک برنامهٔ انتخاب‌شده",
+                        f"دورهٔ آموزشی {weeks} هفته‌ای",
+                        "6 هفته" if weeks == 4 else "16 هفته",
+                        "خودکار تمدید نمی‌شود",
+                        "آغاز با جلسهٔ آزمایشی رایگان",
+                    )
+                    expected_euros = [f"€{price}"]
+                    saving_text = None
+                    if saving is not None:
+                        expected_euros.append(f"€{saving}")
+                        saving_text = (
+                            "در مقایسه با سه برنامهٔ پی‌هم 4 هفته‌ای با همان "
+                            f"تعداد صنف، €{saving} صرفه‌جویی می‌شود."
+                        )
+                    localized_evidence_is_exact = (
+                        tuple(re.findall(r"€\d[\d,.]*", card_text))
+                        == tuple(expected_euros)
+                        and (saving_text is None or saving_text in card_text)
+                    )
+                else:
+                    frequency_text = (
+                        "1 class per week"
+                        if frequency == 1
+                        else f"{frequency} classes per week"
+                    )
+                    validity = (
+                        "6-week final validity"
+                        if weeks == 4
+                        else "16-week final validity"
+                    )
+                    expected_text = (
+                        frequency_text,
+                        f"{classes} paid classes",
+                        "40 minutes each",
+                        f"€{price} total",
+                        "Private Quran or Dari/Persian",
+                        "One learner",
+                        "One selected program",
+                        f"{weeks}-week teaching period",
+                        validity,
+                        "Does not renew automatically",
+                        "Start with a Free Trial",
+                    )
+                    localized_evidence_is_exact = saving is None or (
                         f"Saves €{saving} compared with three consecutive 4-week plans at the same frequency."
                         in card_text
-                    ):
-                        matches.append((price, saving))
+                    )
+                if all(card.attributes.get(key) == value for key, value in expected_attributes.items()) and all(
+                    value in card_text for value in expected_text
+                ) and localized_evidence_is_exact:
+                    matches.append((price, saving))
             if len(matches) == 1:
                 price, saving = matches[0]
-                self.visible.protect(f"€{price} total", card.start, end)
+                price_evidence = (
+                    f"€{price}" if self._language == "fa-af" else f"€{price} total"
+                )
+                self.visible.protect(price_evidence, card.start, end)
                 if saving is not None:
+                    saving_evidence = (
+                        f"€{saving}"
+                        if self._language == "fa-af"
+                        else f"Saves €{saving} compared with three consecutive 4-week plans at the same frequency."
+                    )
+                    self.visible.protect(saving_evidence, card.start, end)
+        elif card.kind == "pricing-preview" and self._approval_path == "index.html":
+            if self._language == "fa-af":
+                expected = (
+                    "برنامه‌های انعطاف‌پذیر برای یادگیری پیوسته",
+                    "شاگردان خصوصی قرآن و دری می‌توانند بر پایهٔ تعداد صنفی که با هدف‌ها و زمان‌شان سازگار است، برنامهٔ 4 هفته‌ای یا 12 هفته‌ای را انتخاب کنند.",
+                    "برنامهٔ 4 هفته‌ای از €49",
+                    "درس‌های خصوصی 40 دقیقه‌ای",
+                    "نخستین جلسهٔ آزمایشی رایگان",
+                    "دیدن برنامه‌ها و قیمت‌ها",
+                )
+                price_evidence = "€49"
+                pricing_href = "/pricing/"
+                localized_evidence_is_exact = tuple(
+                    re.findall(r"€\d[\d,.]*", card_text)
+                ) == ("€49",)
+            else:
+                expected = (
+                    "Flexible plans for consistent learning",
+                    "Private Quran and Dari/Persian learners can choose a 4-week or 12-week plan",
+                    "From €49 for a 4-week plan",
+                    "40-minute private lessons",
+                    "Free first trial",
+                    "View Plans and Pricing",
+                )
+                price_evidence = "From €49 for a 4-week plan"
+                pricing_href = "/pricing/"
+                localized_evidence_is_exact = True
+            if (
+                card.attributes.get("data-starting-price-eur") == "49"
+                and pricing_href in attributes
+                and all(value in card_text for value in expected)
+                and localized_evidence_is_exact
+            ):
+                self.visible.protect(price_evidence, card.start, end)
+        elif (
+            card.kind == "benefit-card--extended"
+            and self._approval_path in _APPROVED_CERTIFICATE_PATHS
+            and card.attributes.get("data-plan-weeks") == "12"
+            and all(
+                value in card_text
+                for value in (
+                    APPROVED_CERTIFICATE_EVIDENCE_FA_AF
+                    if self._language == "fa-af"
+                    else APPROVED_CERTIFICATE_EVIDENCE
+                )
+            )
+        ):
+            if self._approval_path == "terms/index.html":
+                self._protect_exact_terms_certificate_context(card, end)
+            else:
+                if self._language == "fa-af":
+                    self.visible.protect("80%", card.start, end)
+                else:
+                    self.visible.protect("Digital certificate of completion", card.start, end)
                     self.visible.protect(
-                        f"Saves €{saving} compared with three consecutive 4-week plans at the same frequency.",
+                        "At least 80% of scheduled paid classes must be completed.",
                         card.start,
                         end,
                     )
-        elif card.kind == "pricing-preview" and self._relative_path == "index.html":
-            expected = (
-                "Flexible plans for consistent learning",
-                "Private Quran and Dari/Persian learners can choose a 4-week or 12-week plan",
-                "From €49 for a 4-week plan",
-                "40-minute private lessons",
-                "Free first trial",
-                "View Plans and Pricing",
-            )
-            if (
-                card.attributes.get("data-starting-price-eur") == "49"
-                and "/pricing/" in attributes
-                and all(value in card_text for value in expected)
-            ):
-                self.visible.protect("From €49 for a 4-week plan", card.start, end)
-        elif (
-            card.kind == "benefit-card--extended"
-            and self._relative_path in _APPROVED_CERTIFICATE_PATHS
-            and card.attributes.get("data-plan-weeks") == "12"
-            and all(value in card_text for value in APPROVED_CERTIFICATE_EVIDENCE)
-        ):
-            if self._relative_path == "terms/index.html":
-                self._protect_exact_terms_certificate_context(card, end)
-            else:
-                self.visible.protect("Digital certificate of completion", card.start, end)
-                self.visible.protect(
-                    "At least 80% of scheduled paid classes must be completed.",
-                    card.start,
-                    end,
-                )
-        elif card.kind == "confirmed-success" and self._relative_path == "success/index.html":
+        elif card.kind == "confirmed-success" and self._approval_path == "success/index.html":
             required = (
                 "Your trial request was submitted",
                 "Salaam Center has received the request.",
@@ -1531,7 +1597,7 @@ class _PublicHTMLParser(HTMLParser):
 
     def protect_approved_legal_disclosures(self) -> None:
         """Protect only the exact approved legal disclosure blocks on legal pages."""
-        expected = _APPROVED_LEGAL_DISCLOSURES.get(self._relative_path)
+        expected = _APPROVED_LEGAL_DISCLOSURES.get(self._approval_path)
         if expected is None:
             return
 
@@ -1560,12 +1626,17 @@ class _PublicHTMLParser(HTMLParser):
     def _protect_approved_terms_plan_matrix(self, start: int, end: int) -> None:
         """Protect prices only inside the complete, exact six-row Terms matrix."""
         section_text = self.visible.text[start:end]
-        heading = "Private Quran and Dari/Persian plans"
+        if self._language == "fa-af":
+            heading = "برنامه‌های خصوصی قرآن و دری"
+            approved_rows = APPROVED_TERMS_PLAN_EVIDENCE_FA_AF
+        else:
+            heading = "Private Quran and Dari/Persian plans"
+            approved_rows = APPROVED_TERMS_PLAN_EVIDENCE
         if section_text.count(heading) != 1:
             return
 
         row_positions: list[int] = []
-        for row in APPROVED_TERMS_PLAN_EVIDENCE:
+        for row in approved_rows:
             if section_text.count(row) != 1:
                 return
             row_positions.append(section_text.find(row))
@@ -1574,7 +1645,7 @@ class _PublicHTMLParser(HTMLParser):
         if section_text.find(heading) > row_positions[0]:
             return
 
-        price_matches = tuple(re.finditer(r"€\d[\d,.]*", section_text))
+        price_matches = tuple(re.finditer(r"€\d+", section_text))
         expected_prices = tuple(
             f"€{price}"
             for _, _, _, price, _ in APPROVED_PRIVATE_PLAN_EVIDENCE
@@ -1591,13 +1662,21 @@ class _PublicHTMLParser(HTMLParser):
         end: int,
     ) -> None:
         card_text = self.visible.text[card.start:end]
-        certificate_phrase = "Digital certificate of completion"
-        percentage_sentence = (
-            "At least 80% of scheduled paid classes must be completed."
-        )
+        if self._language == "fa-af":
+            certificate_phrase = "تصدیق‌نامهٔ دیجیتالی تکمیل"
+            percentage_sentence = (
+                "دست‌کم 80% صنف‌های پولی برنامه‌ریزی‌شده باید تکمیل شود."
+            )
+            approved_evidence = APPROVED_CERTIFICATE_EVIDENCE_FA_AF
+        else:
+            certificate_phrase = "Digital certificate of completion"
+            percentage_sentence = (
+                "At least 80% of scheduled paid classes must be completed."
+            )
+            approved_evidence = APPROVED_CERTIFICATE_EVIDENCE
         if not all(
             card_text.count(value) == 1
-            for value in APPROVED_CERTIFICATE_EVIDENCE
+            for value in approved_evidence
         ):
             return
 

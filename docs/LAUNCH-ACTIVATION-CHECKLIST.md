@@ -2,12 +2,14 @@
 
 This checklist records the approved Cloudflare Pages and WhatsApp handoff architecture. Do not place passwords, API keys, tokens, private DNS credentials or real child data in the repository.
 
-Current approval state: the manual WhatsApp test is complete, the Privacy Policy is approved, the Terms are approved, and indexing is enabled for the 14 intended canonical pages. Success and 404 retain `noindex, nofollow`. The sitemap is available but has not been submitted manually, and Search Console is not enabled. Cloudflare Pages remains the hosting source of truth, automatic deployment from GitHub `main` remains active, and the apex and `www` domains and HTTPS are active. DNS was unchanged.
+Current approval state: the manual WhatsApp test is complete, the Privacy Policy is approved, the Terms are approved, and indexing is enabled for 28 intended localized canonical pages. Both Success pages and both 404 templates retain `noindex, nofollow`. The sitemap is available but has not been submitted manually, and Search Console is not enabled. Cloudflare Pages remains the hosting source of truth, automatic deployment from GitHub `main` remains active, and the apex and `www` domains and HTTPS are active. DNS was unchanged.
 
 ## A. Locked architecture
 
 - [x] Cloudflare Pages is the production hosting source of truth: project `salaam-center`, empty build command, repository-root output and automatic deployment from GitHub `main`.
-- [x] Root `_redirects` is the exact fail-closed static public-route allowlist. Reviewed URLs proxy only to byte-identical committed `site-runtime/` backing artifacts; every other path resolves through the missing sentinel to the styled HTTP 404. No Pages Function, `_worker.js` or form backend is introduced, and every future file must still be classified before push.
+- [x] Afghan Dari is the default at root routes (`fa-AF`, RTL), while the approved English site lives under `/en/` (`en`, LTR). No automatic language redirect or storage exists; normal-anchor switches preserve the equivalent page.
+- [x] Vazirmatn is self-hosted for Dari. Canonicals are language-specific, reciprocal `fa-AF`/`en` hreflang is exact, `x-default` points to Dari, and prepared WhatsApp messages follow the page language.
+- [x] Root `_redirects` is the exact fail-closed static public-route allowlist. Reviewed URLs proxy only to byte-identical committed `site-runtime/` backing artifacts; unknown `/en/` and root paths resolve through language-scoped missing sentinels to the nearest styled HTTP 404. No Pages Function, `_worker.js` or form backend is introduced, and every future file must still be classified before push.
 - [x] Production domains are `https://salaam.center` and `https://www.salaam.center`; HTTPS is active.
 - [x] The remote `Create CNAME` commit `721337d6c53f289b6ca512a8d89439dfc1cacbc9` was inspected as a direct CNAME-only fast-forward whose file contained exactly `salaam.center`, then reconciled.
 - [x] The unnecessary repository-root `CNAME` was removed through a normal forward change. Cloudflare holds the custom-domain configuration, so no replacement CNAME is required.
@@ -28,6 +30,7 @@ Complete these checks with dummy adult data only. Automated tests and visual QA 
 - [x] On WhatsApp Web/desktop, repeat both link checks and confirm the correct conversation opens.
 - [x] Check the experience when WhatsApp is not installed; confirm the platform's normal click-to-chat guidance appears and the Salaam Center site makes no false success claim.
 - [x] Confirm the prepared message is readable, has the approved line breaks and labels, uses trimmed values, and shows `Not provided` when the optional goal is empty.
+- [x] Confirm the root form prepares the approved Dari message and `/en/book-trial/` preserves the approved English message.
 - [x] Confirm the destination is exactly `34614401172`, with no tracking parameter, shortened URL, API wrapper or unexpected recipient.
 - [x] Review the prepared message before sending and confirm it contains no hidden metadata, learner name, sensitive data, medical details, identity numbers, financial details or passwords.
 - [x] Exercise the parent or guardian flow for a child age group and the Adult woman learner flow; confirm invalid role/age combinations are rejected accessibly.
@@ -55,9 +58,9 @@ Complete these checks with dummy adult data only. Automated tests and visual QA 
 The production indexing switch is approved with the following final state:
 
 - [x] `site_mode` is `production` after the legal, indexing and manual live-link approvals were completed.
-- [x] The 14 intended canonical content pages have no `noindex` directive; Success and 404 retain the exact `noindex, nofollow` directive.
+- [x] The 28 intended localized canonical content pages have no `noindex` directive; both Success pages and both 404 templates retain the exact `noindex, nofollow` directive.
 - [x] `robots.txt` allows production crawling and references `https://salaam.center/sitemap.xml`.
-- [x] `sitemap.xml` contains the 14 approved canonical routes and excludes `/success/` and `/404.html`.
+- [x] `sitemap.xml` contains the 28 approved localized canonical routes with reciprocal alternates and excludes both Success routes and both 404 templates.
 - [x] Public production copy contains no stale launch placeholder or incomplete-approval wording.
 - [x] Production preflight is the release gate and must exit 0 before the site is treated as ready for indexing.
 - [x] Analytics, advertising pixels, payments, Search Console, GitHub Pages and repository CNAME remain absent unless each receives separate future approval.
@@ -68,7 +71,7 @@ The production indexing switch is approved with the following final state:
 - [ ] Run the focused WhatsApp, launch-readiness, trust-evidence, pricing, economics, accessibility, protected-media and shared-layout tests.
 - [ ] Run full Python unittest discovery and every JavaScript test; run JavaScript syntax checks, `python -B scripts/sync_public_runtime.py --check` and `git diff --check`.
 - [ ] Confirm public trust failures, broken internal links, public email, `mailto:`, Formspree, active network submission, personal-data storage, analytics, payments, internal teacher-cost leakage and secret findings are all zero.
-- [ ] Confirm all 16 shared-layout source pages and all 21 public runtime backing artifacts remain synchronized, and all protected teacher identities, teacher videos, student videos and approved public prices remain unchanged.
+- [ ] Confirm all 32 shared-layout source pages and all 38 public runtime backing artifacts remain synchronized, and all protected teacher identities, teacher videos, student videos and approved public prices remain unchanged.
 - [ ] Confirm known internal-document, config, script, test, partial and unused-source-asset URLs return the styled HTTP 404 and never return the requested file contents on the apex, `www` and `pages.dev` domains. Include case-changed, encoded-slash, double-slash and query-string variants.
 - [ ] Confirm both the backward-compatible prelaunch preflight command and production preflight exit 0 for the approved production state.
 
@@ -78,5 +81,5 @@ The production indexing switch is approved with the following final state:
 - [ ] Push normally to `main`; never force-push or rewrite the reconciled `Create CNAME` history.
 - [ ] After the push, fetch and confirm local HEAD equals `origin/main`, ahead/behind is `0/0`, the working tree is clean, `CNAME` is absent and no GitHub Pages workflow exists.
 - [ ] Observe the automatic Cloudflare Pages deployment without changing Cloudflare or DNS settings.
-- [ ] Check the apex, `www`, Free Trial, Contact, Privacy and Terms URLs for the exact WhatsApp destination, no public email, no Formspree, no analytics, no false confirmation, intact styling and intact protected media.
+- [ ] Check the apex, `www`, representative Dari root routes and their `/en/` equivalents—including Free Trial, Contact, Privacy and Terms—for exact language switching, WhatsApp destination, no public email, no Formspree, no analytics, no false confirmation, intact styling and intact protected media.
 - [ ] Check the deployment boundary on the apex, `www` and `pages.dev`: reviewed paths load, while internal documentation, config, partials, scripts, tests, unused assets and direct `site-runtime/` paths return the styled HTTP 404 without exposing their bytes.

@@ -46,7 +46,7 @@ def pricing_cards():
     for match in re.finditer(
         r'<article\s+class="[^"]*\bpricing-card\b[^"]*"(?P<attrs>[^>]*)>'
         r'(?P<body>.*?)</article>',
-        source("pricing/index.html"),
+        source("en/pricing/index.html"),
         flags=re.I | re.S,
     ):
         cards.append((attributes(match.group("attrs")), match.group("body")))
@@ -55,7 +55,7 @@ def pricing_cards():
 
 class PricingPageTests(unittest.TestCase):
     def test_pricing_page_has_exact_metadata_scope_and_is_indexable(self):
-        page = source("pricing/index.html")
+        page = source("en/pricing/index.html")
         text = visible(page)
         self.assertIn(
             "<title>Pricing | Salaam Center Private Quran and Dari/Persian Classes</title>",
@@ -66,7 +66,7 @@ class PricingPageTests(unittest.TestCase):
             page,
         )
         self.assertNotIn('<meta name="robots" content="noindex, nofollow" />', page)
-        self.assertIn('<link rel="canonical" href="https://salaam.center/pricing/" />', page)
+        self.assertIn('<link rel="canonical" href="https://salaam.center/en/pricing/" />', page)
         self.assertIn("Private lesson plans", text)
         self.assertIn("Simple plans for consistent learning", text)
         self.assertIn(
@@ -112,7 +112,7 @@ class PricingPageTests(unittest.TestCase):
             )
             self.assertIn("Does not renew automatically", text)
             self.assertIn(
-                '<a class="btn btn--secondary" href="/book-trial/">Start with a Free Trial</a>',
+                '<a class="btn btn--secondary" href="/en/book-trial/">Start with a Free Trial</a>',
                 body,
             )
             if saving is None:
@@ -125,7 +125,7 @@ class PricingPageTests(unittest.TestCase):
         self.assertEqual(PLAN_EVIDENCE, observed)
 
     def test_pricing_page_has_no_discount_badges_checkout_or_data_collection(self):
-        page = source("pricing/index.html")
+        page = source("en/pricing/index.html")
         text = visible(page)
         main = re.search(r'<main id="main-content">.*?</main>', page, re.S).group(0)
         for value in (
@@ -156,7 +156,7 @@ class PricingPageTests(unittest.TestCase):
         self.assertNotRegex(page, r"\b(?:tax|vat)\s+(?:is|are)\s+included\b")
 
     def test_benefits_and_certificate_eligibility_are_precise(self):
-        text = visible(source("pricing/index.html"))
+        text = visible(source("en/pricing/index.html"))
         for value in (
             "One free 40-minute trial per learner",
             "Private one-to-one lessons",
@@ -183,7 +183,7 @@ class PricingPageTests(unittest.TestCase):
         self.assertNotIn("€50 value", text)
 
     def test_policy_summary_covers_validity_absences_payment_and_consumer_rights(self):
-        text = visible(source("pricing/index.html"))
+        text = visible(source("en/pricing/index.html"))
         for value in (
             "At least 24 hours’ notice",
             "Each affected class may be rescheduled once",
@@ -203,7 +203,7 @@ class PricingPageTests(unittest.TestCase):
             self.assertIn(value, text)
 
     def test_faq_uses_native_disclosures_and_locked_answers(self):
-        page = source("pricing/index.html")
+        page = source("en/pricing/index.html")
         summaries = [visible(value) for value in re.findall(r"<summary>(.*?)</summary>", page, re.S)]
         self.assertEqual(11, len(summaries))
         for question in (
@@ -231,7 +231,7 @@ class PricingPageTests(unittest.TestCase):
 
 class EnrolmentJourneyTests(unittest.TestCase):
     def test_home_has_one_concise_private_pricing_preview_before_protected_media(self):
-        page = source("index.html")
+        page = source("en/index.html")
         text = visible(page)
         preview_start = page.index('<section class="section pricing-preview"')
         teacher_start = page.index('<section class="section" aria-labelledby="teachers-title">')
@@ -246,7 +246,7 @@ class EnrolmentJourneyTests(unittest.TestCase):
             "View Plans and Pricing",
         ):
             self.assertIn(value, text)
-        self.assertIn('href="/pricing/"', page)
+        self.assertIn('href="/en/pricing/"', page)
         self.assertEqual(1, len(re.findall(r"€\s*\d+", text)))
         self.assertNotIn("Paid-plan details will be shared clearly before enrolment opens.", text)
         self.assertIn(
@@ -256,8 +256,8 @@ class EnrolmentJourneyTests(unittest.TestCase):
 
     def test_program_pages_state_private_plan_scope_and_group_pricing_status(self):
         for relative in (
-            "programs/quran/index.html",
-            "programs/dari-persian/index.html",
+            "en/programs/quran/index.html",
+            "en/programs/dari-persian/index.html",
         ):
             text = visible(source(relative))
             for value in (
@@ -269,9 +269,9 @@ class EnrolmentJourneyTests(unittest.TestCase):
                 "Compare Plans",
             ):
                 self.assertIn(value, text, relative)
-            self.assertIn('href="/pricing/"', source(relative), relative)
+            self.assertIn('href="/en/pricing/"', source(relative), relative)
 
-        culture_page = source("programs/afghan-culture-islamic-ethics/index.html")
+        culture_page = source("en/programs/afghan-culture-islamic-ethics/index.html")
         culture = visible(culture_page)
         self.assertIn(
             "Group pricing will be published when schedules and cohort arrangements are confirmed.",
@@ -287,7 +287,7 @@ class EnrolmentJourneyTests(unittest.TestCase):
         self.assertNotIn("waitlist", culture.casefold())
 
     def test_how_it_works_and_trial_page_define_the_non_submitting_path(self):
-        process = visible(source("how-it-works/index.html"))
+        process = visible(source("en/how-it-works/index.html"))
         steps = (
             "Explore the programs",
             "Attend a free 40-minute trial",
@@ -305,7 +305,7 @@ class EnrolmentJourneyTests(unittest.TestCase):
         ):
             self.assertIn(value, process)
 
-        trial_page = source("book-trial/index.html")
+        trial_page = source("en/book-trial/index.html")
         trial = visible(trial_page)
         for value in (
             "One free 40-minute trial is available per learner.",
@@ -327,7 +327,7 @@ class EnrolmentJourneyTests(unittest.TestCase):
         self.assertNotRegex(trial_page, r'<form\b[^>]+action=')
 
     def test_terms_privacy_and_success_are_truthful_production_surfaces(self):
-        terms = visible(source("terms/index.html"))
+        terms = visible(source("en/terms/index.html"))
         for value in (
             "Terms and Conditions",
             "Salaam Center",
@@ -356,7 +356,7 @@ class EnrolmentJourneyTests(unittest.TestCase):
             self.assertIn(value, terms)
         self.assertNotRegex(terms, r"(?i)pre-?launch|not the final|\bpending\b|formspree")
 
-        privacy_source = source("privacy-policy/index.html")
+        privacy_source = source("en/privacy-policy/index.html")
         self.assertEqual(
             3,
             privacy_source.count(
@@ -373,13 +373,13 @@ class EnrolmentJourneyTests(unittest.TestCase):
         self.assertNotIn("Formspree", privacy)
         self.assertNotRegex(privacy, r"(?i)pre-?launch|not the final|\bpending\b")
 
-        success = visible(source("success/index.html"))
+        success = visible(source("en/success/index.html"))
         self.assertIn("Continue your conversation in WhatsApp", success)
         self.assertIn("cannot confirm", success)
         self.assertIn("not booked until Salaam Center confirms", success)
 
     def test_program_comparison_table_has_caption_and_keyboard_scroll_region(self):
-        page = source("programs/index.html")
+        page = source("en/programs/index.html")
         self.assertIn('<div class="comparison-wrap" role="region" aria-labelledby="compare-title" tabindex="0">', page)
         self.assertIn("<caption>Compare Salaam Center launch programs</caption>", page)
 

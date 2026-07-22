@@ -11,9 +11,10 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts/sync_shared_layout.py"
 HEADER = ROOT / "partials/header.html"
 FOOTER = ROOT / "partials/footer.html"
+HEADER_FA = ROOT / "partials/header.fa-AF.html"
+FOOTER_FA = ROOT / "partials/footer.fa-AF.html"
 
-EXPECTED_COMPLETE_PAGES = (
-    "404.html",
+ROOT_COMPLETE_PAGES = (
     "index.html",
     "our-approach/index.html",
     "programs/index.html",
@@ -29,14 +30,20 @@ EXPECTED_COMPLETE_PAGES = (
     "privacy-policy/index.html",
     "terms/index.html",
     "success/index.html",
+    "404.html",
+)
+EXPECTED_COMPLETE_PAGES = tuple(
+    localized
+    for root_page in ROOT_COMPLETE_PAGES
+    for localized in (root_page, f"en/{root_page}")
 )
 
 ACTIVE_HREFS = {
     "home": "/",
-    "our_approach": "/our-approach/",
+    "our-approach": "/our-approach/",
     "programs": "/programs/",
     "teachers": "/teachers/",
-    "how_it_works": "/how-it-works/",
+    "how-it-works": "/how-it-works/",
     "pricing": "/pricing/",
     "about": "/about/",
 }
@@ -73,19 +80,18 @@ class NavParser(HTMLParser):
 
 class SharedLayoutSyncTests(unittest.TestCase):
     def test_01_required_shared_layout_files_exist(self):
-        self.assertTrue(SCRIPT.is_file())
-        self.assertTrue(HEADER.is_file())
-        self.assertTrue(FOOTER.is_file())
+        for required in (SCRIPT, HEADER, FOOTER, HEADER_FA, FOOTER_FA):
+            self.assertTrue(required.is_file(), required)
 
-    def test_02_page_map_covers_the_sixteen_complete_pages(self):
+    def test_02_page_map_covers_all_thirty_two_localized_pages(self):
         sync = load_sync_module()
-        configured = tuple(config.path for config in sync.PAGE_CONFIGS)
+        configured = tuple(config.path for config in sync.page_configs(ROOT))
         self.assertEqual(EXPECTED_COMPLETE_PAGES, configured)
-        self.assertEqual(16, len(configured))
+        self.assertEqual(32, len(configured))
 
     def test_03_each_configured_page_has_exactly_one_marker_pair(self):
         sync = load_sync_module()
-        for config in sync.PAGE_CONFIGS:
+        for config in sync.page_configs(ROOT):
             page = (ROOT / config.path).read_text(encoding="utf-8")
             self.assertEqual(1, page.count(sync.HEADER_START), config.path)
             self.assertEqual(1, page.count(sync.HEADER_END), config.path)
@@ -101,26 +107,17 @@ class SharedLayoutSyncTests(unittest.TestCase):
             text=True,
         )
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        self.assertIn("16 page(s)", result.stdout)
+        self.assertIn("32 page(s)", result.stdout)
 
     def test_05_rendering_is_idempotent_in_memory(self):
         sync = load_sync_module()
-        for config in sync.PAGE_CONFIGS:
+        for config in sync.page_configs(ROOT):
             committed = sync.read_exact(ROOT / config.path)
             self.assertEqual(committed, sync.expected_page(ROOT, config), config.path)
 
     def test_06_only_the_matching_primary_navigation_link_is_current(self):
         sync = load_sync_module()
-        current_page_paths = {
-            "home": "index.html",
-            "our_approach": "our-approach/index.html",
-            "programs": "programs/index.html",
-            "teachers": "teachers/index.html",
-            "how_it_works": "how-it-works/index.html",
-            "pricing": "pricing/index.html",
-            "about": "about/index.html",
-        }
-        for config in sync.PAGE_CONFIGS:
+        for config in sync.page_configs(ROOT):
             parser = NavParser()
             parser.feed((ROOT / config.path).read_text(encoding="utf-8"))
             current = [
@@ -128,11 +125,13 @@ class SharedLayoutSyncTests(unittest.TestCase):
                 for link in parser.links
                 if link.get("aria-current") == "page" and "is-active" in link.get("class", "").split()
             ]
-            expected = (
-                ACTIVE_HREFS.get(config.active_nav)
-                if current_page_paths.get(config.active_nav) == config.path
-                else None
+            base_href = ACTIVE_HREFS.get(config.active_nav)
+            active_href = (
+                f"/en{base_href}"
+                if base_href and config.language == "en"
+                else base_href
             )
+            expected = active_href if config.route_id == config.active_nav else None
             self.assertEqual([expected] if expected else [], current, config.path)
 
             active = [
@@ -140,42 +139,55 @@ class SharedLayoutSyncTests(unittest.TestCase):
                 for link in parser.links
                 if "is-active" in link.get("class", "").split()
             ]
-            active_expected = ACTIVE_HREFS.get(config.active_nav)
-            self.assertEqual([active_expected] if active_expected else [], active, config.path)
+            self.assertEqual([active_href] if active_href else [], active, config.path)
 
     def test_07_generated_pages_have_no_unresolved_placeholders(self):
         placeholder = re.compile(r"{{[^{}]+}}")
         for relative in EXPECTED_COMPLETE_PAGES:
             self.assertIsNone(placeholder.search((ROOT / relative).read_text(encoding="utf-8")), relative)
 
-    def test_08_shared_header_contains_the_approved_navigation_contract(self):
-        header = HEADER.read_text(encoding="utf-8")
+    def test_08_shared_headers_contain_the_localized_navigation_contracts(self):
+        english = HEADER.read_text(encoding="utf-8")
         for label, href in (
-            ("Home", "/"),
-            ("Our Approach", "/our-approach/"),
-            ("Programs", "/programs/"),
-            ("Teachers", "/teachers/"),
-            ("How It Works", "/how-it-works/"),
-            ("Pricing", "/pricing/"),
-            ("About", "/about/"),
-            ("Book a Free Trial", "/book-trial/"),
+            ("Home", "/en/"),
+            ("Our Approach", "/en/our-approach/"),
+            ("Programs", "/en/programs/"),
+            ("Teachers", "/en/teachers/"),
+            ("How It Works", "/en/how-it-works/"),
+            ("Pricing", "/en/pricing/"),
+            ("About", "/en/about/"),
+            ("Book a Free Trial", "/en/book-trial/"),
         ):
-            self.assertIn(f'href="{href}"', header, label)
-            self.assertIn(label, header)
-        self.assertLess(header.index("How It Works"), header.index("Pricing"))
-        self.assertLess(header.index("Pricing"), header.index("About"))
+            self.assertIn(f'href="{href}"', english, label)
+            self.assertIn(label, english)
+        self.assertLess(english.index("How It Works"), english.index("Pricing"))
+        self.assertLess(english.index("Pricing"), english.index("About"))
 
-    def test_09_shared_footer_has_the_single_approved_contact_destination(self):
-        footer = FOOTER.read_text(encoding="utf-8")
-        self.assertIn('href="https://wa.me/34614401172"', footer)
-        self.assertIn('target="_blank"', footer)
-        self.assertIn('rel="noopener noreferrer"', footer)
-        self.assertIn('href="/contact/"', footer)
-        self.assertIn('href="/pricing/"', footer)
-        self.assertIn("Pricing", footer)
-        self.assertEqual(1, footer.count("https://wa.me/34614401172"))
-        for value in ("mailto:", "tel:", "api.whatsapp.com"):
-            self.assertNotIn(value, footer)
+        dari = HEADER_FA.read_text(encoding="utf-8")
+        for href in (
+            "/",
+            "/our-approach/",
+            "/programs/",
+            "/teachers/",
+            "/how-it-works/",
+            "/pricing/",
+            "/about/",
+            "/book-trial/",
+        ):
+            self.assertIn(f'href="{href}"', dari)
+        self.assertIn('lang="en" dir="ltr">English</a>', dari)
+
+    def test_09_shared_footers_have_the_single_approved_contact_destination(self):
+        for footer_path, prefix in ((FOOTER_FA, ""), (FOOTER, "/en")):
+            footer = footer_path.read_text(encoding="utf-8")
+            self.assertIn('href="https://wa.me/34614401172"', footer)
+            self.assertIn('target="_blank"', footer)
+            self.assertIn('rel="noopener noreferrer"', footer)
+            self.assertIn(f'href="{prefix}/contact/"', footer)
+            self.assertIn(f'href="{prefix}/pricing/"', footer)
+            self.assertEqual(1, footer.count("https://wa.me/34614401172"))
+            for value in ("mailto:", "tel:", "api.whatsapp.com"):
+                self.assertNotIn(value, footer)
 
     def test_10_shared_sections_have_no_trailing_whitespace(self):
         sync = load_sync_module()

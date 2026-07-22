@@ -5,41 +5,59 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, Sequence
 
+try:
+    from .localized_routes import (
+        LANGUAGE_KEYS,
+        load_localized_routes,
+        source_path_for_public_path,
+    )
+except ImportError:
+    from localized_routes import (
+        LANGUAGE_KEYS,
+        load_localized_routes,
+        source_path_for_public_path,
+    )
 
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_BACKING_ROOT = "site-runtime"
-PAGE_ROUTE_SPECS = (
-    ("index.html", "/", "/site-runtime/home/"),
-    ("our-approach/index.html", "/our-approach/", "/site-runtime/our-approach/"),
-    ("programs/index.html", "/programs/", "/site-runtime/programs/"),
-    ("programs/quran/index.html", "/programs/quran/", "/site-runtime/programs/quran/"),
-    (
-        "programs/dari-persian/index.html",
-        "/programs/dari-persian/",
-        "/site-runtime/programs/dari-persian/",
-    ),
-    (
-        "programs/afghan-culture-islamic-ethics/index.html",
-        "/programs/afghan-culture-islamic-ethics/",
-        "/site-runtime/programs/afghan-culture-islamic-ethics/",
-    ),
-    ("teachers/index.html", "/teachers/", "/site-runtime/teachers/"),
-    ("how-it-works/index.html", "/how-it-works/", "/site-runtime/how-it-works/"),
-    ("pricing/index.html", "/pricing/", "/site-runtime/pricing/"),
-    ("about/index.html", "/about/", "/site-runtime/about/"),
-    ("book-trial/index.html", "/book-trial/", "/site-runtime/book-trial/"),
-    ("contact/index.html", "/contact/", "/site-runtime/contact/"),
-    ("privacy-policy/index.html", "/privacy-policy/", "/site-runtime/privacy-policy/"),
-    ("terms/index.html", "/terms/", "/site-runtime/terms/"),
-    ("success/index.html", "/success/", "/site-runtime/success/"),
-)
+
+
+def backing_relative(source: str) -> str:
+    """Return the distinct committed backing path for a reviewed public source."""
+    if source == "index.html":
+        return f"{PUBLIC_BACKING_ROOT}/home/index.html"
+    return f"{PUBLIC_BACKING_ROOT}/{source}"
+
+
+def _page_route_specs() -> tuple[tuple[str, str, str], ...]:
+    specs = []
+    for localized_route in load_localized_routes(REPO_ROOT):
+        if localized_route.status == "not_found":
+            continue
+        for language in LANGUAGE_KEYS:
+            public_path = localized_route.public_path(language)
+            source = source_path_for_public_path(public_path)
+            backing_route = "/" + backing_relative(source)
+            if backing_route.endswith("/index.html"):
+                backing_route = backing_route[: -len("index.html")]
+            specs.append((source, public_path, backing_route))
+    return tuple(specs)
+
+
+PAGE_ROUTE_SPECS = _page_route_specs()
 PUBLIC_ROUTED_PAGE_SOURCES = tuple(source for source, _, _ in PAGE_ROUTE_SPECS)
 ERROR_PAGE_SOURCE = "404.html"
+ERROR_PAGE_SOURCES = (ERROR_PAGE_SOURCE, "en/404.html")
 ERROR_SENTINEL_PATHS = (
     "__salaam_not_found__",
     "__salaam_not_found__.html",
     "__salaam_not_found__/index.html",
+    "en/__salaam_not_found__",
+    "en/__salaam_not_found__.html",
+    "en/__salaam_not_found__/index.html",
 )
-PUBLIC_PAGE_SOURCES = (*PUBLIC_ROUTED_PAGE_SOURCES, ERROR_PAGE_SOURCE)
+PUBLIC_PAGE_SOURCES = (*PUBLIC_ROUTED_PAGE_SOURCES, *ERROR_PAGE_SOURCES)
 PUBLIC_RUNTIME_ASSETS = (
     "robots.txt",
     "sitemap.xml",
@@ -47,6 +65,8 @@ PUBLIC_RUNTIME_ASSETS = (
     "assets/js/main.js",
     "assets/js/trial-form.js",
     "assets/logo/salaam-center-favicon.svg",
+    "assets/fonts/vazirmatn/Vazirmatn-Variable.woff2",
+    "assets/fonts/vazirmatn/OFL.txt",
 )
 PRIVATE_EXACT_PATHS = (
     "/SALAM-CENTER-APPROVED-FACTS.md",
@@ -68,13 +88,6 @@ PRIVATE_PREFIXES = (
     "/assets/images",
 )
 _LOCAL_ONLY_PARTS = frozenset({".git", ".wrangler", "__pycache__"})
-
-
-def backing_relative(source: str) -> str:
-    """Return the distinct committed backing path for a reviewed public source."""
-    if source == "index.html":
-        return f"{PUBLIC_BACKING_ROOT}/home/index.html"
-    return f"{PUBLIC_BACKING_ROOT}/{source}"
 
 
 def public_backing_pairs() -> tuple[tuple[str, str], ...]:
@@ -99,6 +112,7 @@ def expected_redirect_rules() -> tuple[str, ...]:
         f"/{source} /{backing_relative(source)} 200"
         for source in PUBLIC_RUNTIME_ASSETS
     )
+    rules.append("/en/* /en/__salaam_not_found__ 200")
     rules.append("/* /__salaam_not_found__ 200")
     return tuple(rules)
 
@@ -162,7 +176,10 @@ def deployment_boundary_errors(
     if not actual or actual[-1] != "/* /__salaam_not_found__ 200":
         errors.append("public-route allowlist does not end with the reviewed catchall")
     wildcard_rules = [rule for rule in actual if "*" in rule.split()[0]]
-    if wildcard_rules != ["/* /__salaam_not_found__ 200"]:
+    if wildcard_rules != [
+        "/en/* /en/__salaam_not_found__ 200",
+        "/* /__salaam_not_found__ 200",
+    ]:
         errors.append("public-route allowlist contains an unreviewed wildcard rule")
 
     public_sources = set(PUBLIC_PAGE_SOURCES) | set(PUBLIC_RUNTIME_ASSETS)
@@ -182,8 +199,11 @@ def deployment_boundary_errors(
         except OSError as error:
             errors.append(f"public runtime backing artifact cannot be validated: {error}")
 
-    if not (root / ERROR_PAGE_SOURCE).is_file():
-        errors.append(f"Cloudflare Pages error template is missing: {ERROR_PAGE_SOURCE}")
+    for error_page_source in ERROR_PAGE_SOURCES:
+        if not (root / error_page_source).is_file():
+            errors.append(
+                f"Cloudflare Pages error template is missing: {error_page_source}"
+            )
     for sentinel in ERROR_SENTINEL_PATHS:
         if (root / sentinel).exists():
             errors.append(

@@ -3,30 +3,20 @@ import re
 import unittest
 from pathlib import Path
 
+from scripts.deployment_boundary import PUBLIC_PAGE_SOURCES
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config/launch-readiness.json"
 WHATSAPP_NUMBER = "34614401172"
 WHATSAPP_URL = f"https://wa.me/{WHATSAPP_NUMBER}"
-PUBLIC_PAGES = (
-    "index.html",
-    "our-approach/index.html",
-    "programs/index.html",
-    "programs/quran/index.html",
-    "programs/dari-persian/index.html",
-    "programs/afghan-culture-islamic-ethics/index.html",
-    "teachers/index.html",
-    "how-it-works/index.html",
-    "pricing/index.html",
-    "about/index.html",
-    "book-trial/index.html",
-    "contact/index.html",
-    "privacy-policy/index.html",
-    "terms/index.html",
+PUBLIC_PAGES = PUBLIC_PAGE_SOURCES
+NOINDEX_PAGES = {
     "success/index.html",
     "404.html",
-)
-NOINDEX_PAGES = {"success/index.html", "404.html"}
+    "en/success/index.html",
+    "en/404.html",
+}
 
 
 def read(relative: str) -> str:
@@ -102,7 +92,7 @@ class PublicWhatsAppArchitectureTests(unittest.TestCase):
         self.assertNotRegex(public_html + script, r"(?i)wa\.me/[^\s\"']+[?&](?:utm_|fbclid|gclid|ref=)")
 
     def test_contact_page_and_footer_make_whatsapp_the_only_public_contact_route(self):
-        contact = read("contact/index.html")
+        contact = read("en/contact/index.html")
         footer = read("partials/footer.html")
         for source in (contact, footer):
             self.assertIn(WHATSAPP_URL, source)
@@ -113,10 +103,10 @@ class PublicWhatsAppArchitectureTests(unittest.TestCase):
         self.assertIn("Questions about programs, eligibility or free trials", contact)
         self.assertIn("Chat with Salaam Center on WhatsApp", contact)
         self.assertIn("parent or guardian", contact.casefold())
-        self.assertIn('href="/contact/"', footer)
+        self.assertIn('href="/en/contact/"', footer)
 
     def test_privacy_discloses_local_processing_third_party_transfer_and_minor_safety(self):
-        privacy = read("privacy-policy/index.html").casefold()
+        privacy = read("en/privacy-policy/index.html").casefold()
         for phrase in (
             "locally in your browser",
             "does not submit or store",
@@ -138,7 +128,7 @@ class PublicWhatsAppArchitectureTests(unittest.TestCase):
         self.assertNotRegex(privacy, r"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}")
 
     def test_terms_describe_whatsapp_as_an_enquiry_without_booking_or_payment_obligation(self):
-        terms = read("terms/index.html").casefold()
+        terms = read("en/terms/index.html").casefold()
         for phrase in (
             "whatsapp message is an enquiry",
             "no payment obligation",
@@ -154,7 +144,7 @@ class PublicWhatsAppArchitectureTests(unittest.TestCase):
         self.assertNotRegex(terms, r"formspree|pre-?launch|not the final|\bpending\b")
 
     def test_success_route_never_claims_a_submission_or_booking(self):
-        success = read("success/index.html")
+        success = read("en/success/index.html")
         self.assertIn("Continue your conversation in WhatsApp", success)
         self.assertIn("cannot confirm", success)
         self.assertIn("press Send", success)

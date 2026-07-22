@@ -1,0 +1,130 @@
+[
+  {
+    "id": "home",
+    "fa_AF": "/",
+    "en": "/en/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "our-approach",
+    "fa_AF": "/our-approach/",
+    "en": "/en/our-approach/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "programs",
+    "fa_AF": "/programs/",
+    "en": "/en/programs/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "quran",
+    "fa_AF": "/programs/quran/",
+    "en": "/en/programs/quran/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "dari-persian",
+    "fa_AF": "/programs/dari-persian/",
+    "en": "/en/programs/dari-persian/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "afghan-culture-islamic-ethics",
+    "fa_AF": "/programs/afghan-culture-islamic-ethics/",
+    "en": "/en/programs/afghan-culture-islamic-ethics/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "teachers",
+    "fa_AF": "/teachers/",
+    "en": "/en/teachers/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "how-it-works",
+    "fa_AF": "/how-it-works/",
+    "en": "/en/how-it-works/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "pricing",
+    "fa_AF": "/pricing/",
+    "en": "/en/pricing/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "about",
+    "fa_AF": "/about/",
+    "en": "/en/about/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "book-trial",
+    "fa_AF": "/book-trial/",
+    "en": "/en/book-trial/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "contact",
+    "fa_AF": "/contact/",
+    "en": "/en/contact/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "privacy-policy",
+    "fa_AF": "/privacy-policy/",
+    "en": "/en/privacy-policy/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "terms",
+    "fa_AF": "/terms/",
+    "en": "/en/terms/",
+    "indexable": true,
+    "sitemap": true,
+    "status": "page"
+  },
+  {
+    "id": "success",
+    "fa_AF": "/success/",
+    "en": "/en/success/",
+    "indexable": false,
+    "sitemap": false,
+    "status": "success"
+  },
+  {
+    "id": "not-found",
+    "fa_AF": "/404.html",
+    "en": "/en/404.html",
+    "indexable": false,
+    "sitemap": false,
+    "status": "not_found"
+  }
+]

@@ -1,4 +1,12 @@
-/* Salaam Center English website visual foundation */
+/* Salaam Center bilingual website visual foundation */
+
+@font-face {
+  font-family: "Vazirmatn";
+  src: url("/assets/fonts/vazirmatn/Vazirmatn-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
 
 :root {
   --blue: #2b87d5;
@@ -38,6 +46,11 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+html[lang="fa-AF"] {
+  --font-sans: "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
+}
+
 body {
   margin: 0;
   min-width: 20rem;
@@ -52,8 +65,32 @@ body {
 }
 
 body,
-button {
+button,
+input,
+select,
+textarea {
   font-family: var(--font-sans);
+}
+
+html[lang="fa-AF"] body,
+html[lang="fa-AF"] button,
+html[lang="fa-AF"] input,
+html[lang="fa-AF"] select,
+html[lang="fa-AF"] textarea {
+  font-family: "Vazirmatn", system-ui, sans-serif;
+}
+
+html[dir="rtl"] h1,
+html[dir="rtl"] h2,
+html[dir="rtl"] h3,
+html[dir="rtl"] .eyebrow,
+html[dir="rtl"] .footer__heading,
+html[dir="rtl"] .teacher-card__languages,
+html[dir="rtl"] .feedback-video-card__label,
+html[dir="rtl"] .pricing-card__kicker,
+html[dir="rtl"] .pricing-card__badge {
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 img,
@@ -120,7 +157,7 @@ p {
 
 ul,
 ol {
-  padding-left: 1.25rem;
+  padding-inline-start: 1.25rem;
 }
 
 li + li {
@@ -142,7 +179,7 @@ li + li {
   position: fixed;
   z-index: 1000;
   top: 0.75rem;
-  left: 0.75rem;
+  inset-inline-start: 0.75rem;
   transform: translateY(-180%);
   border-radius: var(--radius-sm);
   background: var(--navy);
@@ -318,7 +355,8 @@ li + li {
   display: flex;
   align-items: center;
   gap: clamp(0.75rem, 1.5vw, 1.3rem);
-  margin: 0 0 0 auto;
+  margin: 0;
+  margin-inline-start: auto;
   padding: 0;
   list-style: none;
 }
@@ -472,7 +510,7 @@ li + li {
 
 .page-hero::after {
   position: absolute;
-  right: -5rem;
+  inset-inline-end: -5rem;
   bottom: -7rem;
   width: 22rem;
   height: 22rem;
@@ -579,7 +617,7 @@ li + li {
 .pillar-card::before {
   position: absolute;
   top: 1.25rem;
-  left: 1.5rem;
+  inset-inline-start: 1.5rem;
   width: 2.4rem;
   height: 0.22rem;
   border-radius: 999px;
@@ -628,7 +666,7 @@ li + li {
 .check-list li {
   position: relative;
   margin: 0.65rem 0 0;
-  padding-left: 1.6rem;
+  padding-inline-start: 1.6rem;
   color: var(--text-muted);
 }
 
@@ -637,7 +675,7 @@ li + li {
 .check-list li::before {
   position: absolute;
   top: 0.6em;
-  left: 0;
+  inset-inline-start: 0;
   width: 0.55rem;
   height: 0.55rem;
   border-radius: 50%;
@@ -669,14 +707,14 @@ li + li {
   background: var(--white);
   color: var(--navy);
   font-weight: 800;
-  text-align: left;
+  text-align: start;
 }
 
 .comparison-table th,
 .comparison-table td {
   border-bottom: 1px solid var(--border);
   padding: 1rem 1.15rem;
-  text-align: left;
+  text-align: start;
   vertical-align: top;
 }
 
@@ -706,7 +744,8 @@ li + li {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--white);
-  padding: 1.5rem 1.5rem 1.5rem 5rem;
+  padding-block: 1.5rem;
+  padding-inline: 5rem 1.5rem;
   box-shadow: var(--shadow-sm);
   counter-increment: process;
 }
@@ -714,7 +753,7 @@ li + li {
 .process-list li::before {
   position: absolute;
   top: 1.35rem;
-  left: 1.35rem;
+  inset-inline-start: 1.35rem;
   display: grid;
   width: 2.6rem;
   height: 2.6rem;
@@ -723,6 +762,7 @@ li + li {
   background: var(--blue-dark);
   color: var(--white);
   content: counter(process, decimal-leading-zero);
+  direction: ltr;
   font-size: 0.82rem;
   font-weight: 850;
 }
@@ -752,13 +792,13 @@ li + li {
 }
 
 .notice {
-  border-left: 0.35rem solid var(--gold);
+  border-inline-start: 0.35rem solid var(--gold);
   border-radius: var(--radius-md);
   box-shadow: none;
 }
 
 .notice--blue {
-  border-left-color: var(--blue);
+  border-inline-start-color: var(--blue);
   background: var(--soft-blue);
 }
 
@@ -771,8 +811,9 @@ li + li {
 
 .quote-panel {
   margin: 0;
-  border-left: 0.35rem solid var(--gold);
-  padding: 0.5rem 0 0.5rem 1.5rem;
+  border-inline-start: 0.35rem solid var(--gold);
+  padding-block: 0.5rem;
+  padding-inline-start: 1.5rem;
   color: var(--navy);
   font-family: var(--font-heading);
   font-size: clamp(1.4rem, 3vw, 2.2rem);
@@ -975,9 +1016,9 @@ li + li {
 
 .pricing-card__saving {
   margin-bottom: 1.25rem;
-  border-left: 0.25rem solid var(--gold);
+  border-inline-start: 0.25rem solid var(--gold);
   color: var(--navy);
-  padding-left: 0.8rem;
+  padding-inline-start: 0.8rem;
   font-weight: 750;
 }
 
@@ -1005,7 +1046,7 @@ li + li {
   color: var(--navy);
   font-size: 0.88rem;
   font-weight: 750;
-  text-align: right;
+  text-align: end;
 }
 
 .pricing-card__renewal {
@@ -1082,7 +1123,8 @@ li + li {
 .faq-list summary {
   min-height: 3rem;
   color: var(--navy);
-  padding: 1rem 3rem 1rem 1.25rem;
+  padding-block: 1rem;
+  padding-inline: 1.25rem 3rem;
   cursor: pointer;
   font-weight: 800;
 }
@@ -1316,8 +1358,7 @@ li + li {
   .nav__links.is-enhanced {
     position: absolute;
     top: calc(100% + 1px);
-    right: -1.25rem;
-    left: -1.25rem;
+    inset-inline: -1.25rem;
     display: none;
     width: auto;
     flex-wrap: nowrap;
@@ -1355,7 +1396,7 @@ li + li {
   }
 
   .nav__cta {
-    margin-left: auto;
+    margin-inline-start: auto;
   }
 
   .nav__toggle.is-enhanced {
@@ -1386,10 +1427,8 @@ li + li {
   }
 
   .nav__links.is-enhanced {
-    right: -1rem;
-    left: -1rem;
-    padding-right: 1rem;
-    padding-left: 1rem;
+    inset-inline: -1rem;
+    padding-inline: 1rem;
   }
 
   .card-grid--2,
@@ -1443,7 +1482,7 @@ li + li {
 
   .process-list li::before {
     top: 1.25rem;
-    left: 1.25rem;
+    inset-inline-start: 1.25rem;
   }
 
   .footer__grid {

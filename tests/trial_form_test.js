@@ -5,8 +5,10 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const root = path.resolve(__dirname, '..');
-const html = fs.readFileSync(path.join(root, 'book-trial/index.html'), 'utf8');
-const successHtml = fs.readFileSync(path.join(root, 'success/index.html'), 'utf8');
+const html = fs.readFileSync(path.join(root, 'en/book-trial/index.html'), 'utf8');
+const dariHtml = fs.readFileSync(path.join(root, 'book-trial/index.html'), 'utf8');
+const successHtml = fs.readFileSync(path.join(root, 'en/success/index.html'), 'utf8');
+const dariSuccessHtml = fs.readFileSync(path.join(root, 'success/index.html'), 'utf8');
 const script = fs.readFileSync(path.join(root, 'assets/js/trial-form.js'), 'utf8');
 const whatsappNumber = '34614401172';
 
@@ -83,6 +85,7 @@ function createHarness(options = {}) {
     removeAttribute() {},
   };
   const document = {
+    documentElement: { lang: options.language || 'en' },
     querySelector(selector) { return selector === '[data-trial-form]' ? form : null; },
     getElementById(id) {
       if (id === 'error-summary') return summary;
@@ -240,6 +243,55 @@ test('blank optional learning goal becomes Not provided', () => {
   assert.match(message, /Learning goal: Not provided/);
 });
 
+test('Dari form builds an exact localized WhatsApp message without changing the handoff', () => {
+  const harness = createHarness({
+    language: 'fa-AF',
+    values: {
+      contact_name: '  سمیرا رحیمی  ',
+      country_timezone: '  اسپانیا / وقت مادرید  ',
+      preferred_schedule: '  سه‌شنبه و پنج‌شنبه پس از ساعت 18:00 به وقت مادرید  ',
+      learning_goal: '  خواندن قرآن با اطمینان بیشتر  ',
+    },
+  });
+  harness.click();
+
+  assert.equal(harness.opened.length, 1);
+  const target = new URL(harness.opened[0].url);
+  assert.equal(target.pathname, `/${whatsappNumber}`);
+  assert.equal(target.searchParams.get('text'), [
+    'سلام Salaam Center،',
+    '',
+    'می‌خواهم برای یک جلسهٔ آزمایشی رایگان 40 دقیقه‌ای درخواست بدهم.',
+    '',
+    'نقش تماس‌گیرنده: والد یا سرپرست',
+    'نام شخص تماس‌گیرنده: سمیرا رحیمی',
+    'کشور / منطقهٔ زمانی: اسپانیا / وقت مادرید',
+    'گروه سنی شاگرد: 8 تا 11 سال',
+    'برنامه: قرآن',
+    'تعداد صنف در هفته: 2 صنف در هفته',
+    'زمان‌های ترجیحی: سه‌شنبه و پنج‌شنبه پس از ساعت 18:00 به وقت مادرید',
+    'هدف آموزشی: خواندن قرآن با اطمینان بیشتر',
+    '',
+    'می‌دانم که استاد و زمان جلسه باید پیش از برگزاری تأیید شوند.',
+  ].join('\n'));
+});
+
+test('Dari optional value, validation summary, and button state remain localized', () => {
+  const blankGoal = createHarness({ language: 'fa-AF', values: { learning_goal: '   ' } });
+  blankGoal.click();
+  const message = new URL(blankGoal.opened[0].url).searchParams.get('text');
+  assert.match(message, /هدف آموزشی: ذکر نشده/);
+  assert.equal(blankGoal.button.textContent, 'در حال باز کردن واتس‌اپ…');
+  blankGoal.runTimers();
+  assert.equal(blankGoal.button.textContent, 'ادامه در واتس‌اپ');
+
+  const invalid = createHarness({ language: 'fa-AF', values: { contact_name: '   ' } });
+  invalid.click();
+  assert.equal(invalid.opened.length, 0);
+  assert.match(invalid.summary.textContent, /^لطفاً بررسی کنید:/);
+  assert.match(invalid.errors.contact_name.textContent, /نام شخص تماس‌گیرنده/);
+});
+
 test('whitespace-only required values and overlong values fail with focused accessible errors', () => {
   for (const [name, value] of [
     ['contact_name', '   '],
@@ -354,4 +406,10 @@ test('generic fallback and direct Success access remain truthful and safe', () =
   );
   assert.doesNotMatch(successHtml, /data-success-state|Request received|Your trial request was submitted/i);
   assert.doesNotMatch(successHtml, /sessionStorage|submitted values/i);
+
+  assert.match(dariHtml, /ادامه در واتس‌اپ/);
+  assert.match(dariSuccessHtml, /گفت‌وگوی خود را در واتس‌اپ ادامه دهید/);
+  assert.match(dariSuccessHtml, /نمی‌تواند تأیید کند[^<]*(?:فرستاده|ارسال)/);
+  assert.match(dariSuccessHtml, /تا زمانی که Salaam Center[^<]*استاد و زمان/);
+  assert.doesNotMatch(dariSuccessHtml, /درخواست شما دریافت شد|رزرو شما تأیید شد/);
 });
