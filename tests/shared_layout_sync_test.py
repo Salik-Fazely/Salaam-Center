@@ -167,12 +167,14 @@ class SharedLayoutSyncTests(unittest.TestCase):
 
     def test_09_shared_footer_has_the_single_approved_contact_destination(self):
         footer = FOOTER.read_text(encoding="utf-8")
-        self.assertIn('href="mailto:hello@salaam.center"', footer)
+        self.assertIn('href="https://wa.me/34614401172"', footer)
+        self.assertIn('target="_blank"', footer)
+        self.assertIn('rel="noopener noreferrer"', footer)
         self.assertIn('href="/contact/"', footer)
         self.assertIn('href="/pricing/"', footer)
         self.assertIn("Pricing", footer)
-        self.assertEqual(1, footer.count("mailto:"))
-        for value in ("tel:", "wa.me/", "http://", "https://"):
+        self.assertEqual(1, footer.count("https://wa.me/34614401172"))
+        for value in ("mailto:", "tel:", "api.whatsapp.com"):
             self.assertNotIn(value, footer)
 
     def test_10_shared_sections_have_no_trailing_whitespace(self):

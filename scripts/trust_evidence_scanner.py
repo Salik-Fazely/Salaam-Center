@@ -6,8 +6,16 @@ import json
 from pathlib import Path
 import posixpath
 import re
+import sys
 from typing import Collection, Sequence
 from urllib.parse import unquote, urlsplit
+
+sys.dont_write_bytecode = True
+
+try:
+    from scripts.deployment_boundary import deployment_boundary_errors
+except ModuleNotFoundError:  # Support direct execution outside the repository cwd.
+    from deployment_boundary import deployment_boundary_errors
 
 
 PUBLIC_HTML_PATHS = (
@@ -172,6 +180,29 @@ class _ClaimRule:
 
 _HTML_ONLY = frozenset({SurfaceType.HTML})
 _STRUCTURED_ONLY = frozenset({SurfaceType.STRUCTURED_DATA})
+_EXECUTABLE_ONLY = frozenset({SurfaceType.EXECUTABLE_JAVASCRIPT})
+_APPROVED_WHATSAPP_LINKS = frozenset({
+    "https://wa.me/34614401172",
+    "https://wa.me/34614401172?text=",
+})
+_WHATSAPP_URL_CANDIDATE = re.compile(
+    r"(?<![A-Za-z0-9:/._-])(?:(?:[A-Za-z][A-Za-z0-9+.-]*:)?//)?"
+    r"(?:[A-Z0-9-]+\.)*wa\.me(?::\d+)?(?:/[^\s\"'<>]*)?|"
+    r"(?<![A-Za-z0-9:/._-])(?:(?:[A-Za-z][A-Za-z0-9+.-]*:)?//)?"
+    r"(?:[A-Z0-9-]+\.)*whatsapp\.com(?::\d+)?(?:/[^\s\"'<>]*)?|"
+    r"(?<![A-Za-z0-9:/._-])https?://[^\s\"'<>]*whatsapp[^\s\"'<>]*|"
+    r"(?<![A-Za-z0-9:/._-])(?:https?://)?(?:www\.)?"
+    r"(?:bit\.ly|tinyurl\.com|t\.co|is\.gd|tiny\.cc)/[^\s\"'<>]+",
+    re.IGNORECASE,
+)
+_NETWORK_SUBMISSION_RE = re.compile(
+    r"(?<![\w$.])fetch\s*\((?![^()\n]*\)\s*\{)|"
+    r"\b(?:window|globalThis|self)\s*\.\s*fetch\s*\(|"
+    r"\b(?:new\s+)?XMLHttpRequest\b|"
+    r"\bnavigator\s*\.\s*sendBeacon\s*\(|"
+    r"(?:\(\s*)?\bnew\s+Image\s*\([^)]*\)\s*(?:\)\s*)?\.\s*src\s*=",
+    re.IGNORECASE,
+)
 _PRODUCTION_PLACEHOLDER_RE = re.compile(
     r"FORM_ID|\bTBD\b|\bTODO\b|pre-launch|prelaunch|being prepared|not yet open|"
     r"\bpending\b|not active yet|will only become active|not operationally verified",
@@ -312,28 +343,99 @@ CLAIM_RULES = (
         "active form or contact destination",
         "form action or contact integration",
         re.compile(
-            r"(?:<form\b(?![^>]*\bdata-prelaunch-disabled\s*=\s*['\"]true['\"])|"
+            r"(?:<form\b(?![^>]*\bdata-prelaunch-disabled\s*=\s*['\"]true['\"])(?![^>]*\bdata-whatsapp-handoff\s*=\s*['\"]true['\"])|"
             r"\baction\s*=\s*['\"]?(?:https?:|mailto:|tel:)|"
-            r"(?:https?:)?//(?:wa\.me|api\.whatsapp\.com)/|"
-            r"\bmailto:(?!hello@salaam\.center(?:['\"\s>]|$))|\btel:|"
+            r"\bmailto:|\btel:|"
             r"https?://script\.google\.com/macros/)",
             re.IGNORECASE,
         ),
     ),
     _ClaimRule(
+        "unapproved WhatsApp destination",
+        "wrong number, tracking query, API endpoint, or non-wa.me wrapper",
+        _WHATSAPP_URL_CANDIDATE,
+    ),
+    _ClaimRule(
+        "active Formspree endpoint",
+        "Formspree endpoint is superseded and prohibited in public code",
+        re.compile(r"\bformspree(?:\.io)?\b", re.IGNORECASE),
+    ),
+    _ClaimRule(
         "unsafe form endpoint",
-        "Formspree placeholder, email-address endpoint, or non-form-ID endpoint",
+        "Formspree endpoint or placeholder is prohibited in public code",
+        re.compile(r"\bformspree(?:\.io)?\b", re.IGNORECASE),
+    ),
+    _ClaimRule(
+        "email contact publication",
+        "public email address or mailto destination",
         re.compile(
-            r"http://formspree\.io/[^\s\"'<>]*|"
-            r"https://formspree\.io/(?!f/(?!FORM_ID(?=[\s\"'<>]|$))[A-Za-z0-9_-]{5,}(?=[\s\"'<>]|$))[^\s\"'<>]*",
+            r"\bmailto:|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b",
             re.IGNORECASE,
         ),
+    ),
+    _ClaimRule(
+        "network form submission",
+        "browser network submission or tracking-pixel path",
+        _NETWORK_SUBMISSION_RE,
+        _EXECUTABLE_ONLY,
+    ),
+    _ClaimRule(
+        "personal-data storage",
+        "browser storage used by the trial or contact flow",
+        re.compile(r"\b(?:localStorage|sessionStorage)\b"),
+        _EXECUTABLE_ONLY,
+    ),
+    _ClaimRule(
+        "WhatsApp API credential",
+        "WhatsApp token, API key, or secret in executable code",
+        re.compile(
+            r"\bwhatsapp(?:(?:[_\s-]?)(?:business|platform|api|access|auth))*"
+            r"[_\s-]?(?:token|key|secret|credential)s?\b",
+            re.IGNORECASE,
+        ),
+        _EXECUTABLE_ONLY,
+    ),
+    _ClaimRule(
+        "false message-sent confirmation",
+        "message-sent state the website cannot verify",
+        re.compile(
+            r"\b(?:(?:your|the)\s+)?(?:whatsapp\s+)?message\s+"
+            r"(?:(?:is|was|has\s+been)\s+)?(?:successfully\s+)?sent\b",
+            re.IGNORECASE,
+        ),
+        commercial_rule=True,
+    ),
+    _ClaimRule(
+        "false booking confirmation",
+        "trial or booking confirmation without operational confirmation",
+        re.compile(
+            r"\b(?:"
+            r"(?:(?:your|the)\s+)?(?:trial|booking)\s+"
+            r"(?:is\s+|has\s+been\s+)?(?:now\s+|successfully\s+)?(?:booked|confirmed)|"
+            r"(?:we|salaam\s+center|the\s+website)\s+(?:have\s+)?confirmed\s+"
+            r"(?:your|the)\s+(?:trial|booking)"
+            r")\b(?!\s+only\s+after)",
+            re.IGNORECASE,
+        ),
+        commercial_rule=True,
+    ),
+    _ClaimRule(
+        "automatic WhatsApp sending claim",
+        "claim that a WhatsApp message is sent automatically",
+        re.compile(
+            r"\b(?:automatically\s+(?:send|sends|sent)|auto[- ]send(?:s|ing)?|"
+            r"send(?:s|ing)?\s+(?:the\s+message\s+)?automatically|"
+            r"sent\s+automatically)\b",
+            re.IGNORECASE,
+        ),
+        commercial_rule=True,
     ),
     _ClaimRule(
         "forbidden form field",
         "child contact, sensitive, payment, upload, or marketing field",
         re.compile(
-            r"\bname\s*=\s*['\"](?:child[_-]?(?:email|phone)|phone|telephone|mobile|"
+            r"\bname\s*=\s*['\"](?:email|child[_-]?(?:email|phone)|phone|telephone|mobile|"
+            r"learner[_-]?(?:name|first[_-]?name|surname|last[_-]?name)|"
             r"date[_-]?of[_-]?birth|dob|passport|government[_-]?id|national[_-]?id|id[_-]?number|"
             r"school[_-]?name|(?:home[_-]?)?address|payment|card[_-]?number|bank[_-]?account|"
             r"financial(?:[_-]info)?|income|file|marketing(?:[_-]consent)?|"
@@ -543,6 +645,18 @@ def _commercial_match_is_negated(
     end: int,
     question_safe: bool = False,
 ) -> bool:
+    clause_start = max(text.rfind(mark, 0, start) for mark in (".", "!", "?", ";", "\n")) + 1
+    prefix = text[clause_start:start]
+    coordinating_matches = tuple(_COORDINATING_BOUNDARY.finditer(prefix))
+    if coordinating_matches:
+        prefix = prefix[coordinating_matches[-1].end():]
+    if re.search(
+        r"\b(?:cannot|can\s+not|can['’]t|does\s+not|doesn['’]t)\s+"
+        r"(?:know|confirm|verify|tell)\b",
+        prefix,
+        re.IGNORECASE,
+    ):
+        return True
     return _predicate_match_is_negated(
         text,
         start,
@@ -746,6 +860,11 @@ def _virtual_rendered_claims(text: str) -> tuple[tuple[str, str], ...]:
         ):
             continue
         for match in claim_rule.pattern.finditer(text):
+            if (
+                claim_rule.category == "unapproved WhatsApp destination"
+                and match.group(0) in _APPROVED_WHATSAPP_LINKS
+            ):
+                continue
             if claim_rule.certificate_rule and _certificate_match_is_negated(
                 text, match.start(), match.end()
             ):
@@ -920,6 +1039,11 @@ def scan_surface(surface: SurfaceText) -> tuple[Finding, ...]:
             continue
         for match in claim_rule.pattern.finditer(masked_text):
             if (
+                claim_rule.category == "unapproved WhatsApp destination"
+                and match.group(0) in _APPROVED_WHATSAPP_LINKS
+            ):
+                continue
+            if (
                 is_form_surface
                 and claim_rule.category == "active form or contact destination"
                 and any(item.category == claim_rule.category for item in results)
@@ -1057,10 +1181,38 @@ class _PublicHTMLParser(HTMLParser):
         self._in_title = False
         self._script_surface: SurfaceType | None = None
         self._evidence_card: _EvidenceCard | None = None
+        self._whatsapp_form_line: int | None = None
+        self._whatsapp_form_has_button = False
+        self._whatsapp_form_is_unsafe = False
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         normalized_tag = tag.lower()
         line, _ = self.getpos()
+        attributes = {name.lower(): value or "" for name, value in attrs}
+        if not self._in_head:
+            self._add_executable_attributes(attrs)
+
+        if normalized_tag == "form" and not self._in_head:
+            if attributes.get("data-whatsapp-handoff", "").casefold() == "true":
+                self._whatsapp_form_line = line
+                self._whatsapp_form_has_button = False
+                self._whatsapp_form_is_unsafe = any(
+                    name in attributes for name in ("action", "method", "onsubmit")
+                )
+        elif self._whatsapp_form_line is not None and normalized_tag == "button":
+            button_type = attributes.get("type", "submit").casefold()
+            if (
+                button_type == "button"
+                and "data-whatsapp-submit" in attributes
+                and "formaction" not in attributes
+            ):
+                self._whatsapp_form_has_button = True
+            elif button_type == "submit" or "formaction" in attributes:
+                self._whatsapp_form_is_unsafe = True
+        elif self._whatsapp_form_line is not None and normalized_tag == "input":
+            if attributes.get("type", "text").casefold() in {"submit", "image"}:
+                self._whatsapp_form_is_unsafe = True
+
         if not self._in_head and normalized_tag in _VISIBLE_BLOCK_TAGS:
             self.visible.boundary(line)
 
@@ -1070,7 +1222,6 @@ class _PublicHTMLParser(HTMLParser):
         ):
             self._evidence_card.depth += 1
         elif self._evidence_card is None and normalized_tag in ("article", "section", "div"):
-            attributes = {name.lower(): value or "" for name, value in attrs}
             classes = frozenset(attributes.get("class", "").split())
             kind = "confirmed-success" if (
                 self._relative_path == "success/index.html"
@@ -1162,6 +1313,16 @@ class _PublicHTMLParser(HTMLParser):
             self._in_title = False
         elif normalized_tag == "script":
             self._script_surface = None
+        elif normalized_tag == "form" and self._whatsapp_form_line is not None:
+            if self._whatsapp_form_is_unsafe or not self._whatsapp_form_has_button:
+                self.fragments.append((
+                    SurfaceType.HTML,
+                    self._whatsapp_form_line,
+                    '<form data-invalid-whatsapp-handoff="true">',
+                ))
+            self._whatsapp_form_line = None
+            self._whatsapp_form_has_button = False
+            self._whatsapp_form_is_unsafe = False
         if not self._in_head and normalized_tag in _VISIBLE_BLOCK_TAGS:
             self.visible.boundary(line)
 
@@ -1175,6 +1336,27 @@ class _PublicHTMLParser(HTMLParser):
                 self.fragments.append((SurfaceType.METADATA, line, data))
         elif not self._in_head:
             self.visible.append(data, line)
+
+    def _add_executable_attributes(
+        self,
+        attrs: list[tuple[str, str | None]],
+    ) -> None:
+        line, _ = self.getpos()
+        for name, value in attrs:
+            if not value:
+                continue
+            normalized_name = name.casefold()
+            if normalized_name.startswith("on") and len(normalized_name) > 2:
+                self.fragments.append((SurfaceType.EXECUTABLE_JAVASCRIPT, line, value))
+                continue
+            if normalized_name in {"href", "src", "action", "formaction"}:
+                javascript = re.match(r"\s*javascript\s*:(.*)", value, re.I | re.S)
+                if javascript:
+                    self.fragments.append((
+                        SurfaceType.EXECUTABLE_JAVASCRIPT,
+                        line,
+                        javascript.group(1),
+                    ))
 
     def _add_attributes(
         self,
@@ -1493,6 +1675,18 @@ def scan_repository(
         production_mode = json.loads(config_path.read_text(encoding="utf-8")).get("site_mode") == "production"
     except (FileNotFoundError, json.JSONDecodeError, AttributeError):
         production_mode = False
+    if config_path.is_file():
+        boundary_path = root_path / "_redirects"
+        for error in deployment_boundary_errors(root_path, public_html_paths):
+            all_findings.append(Finding(
+                path=boundary_path,
+                surface=SurfaceType.METADATA,
+                category="unsafe deployment boundary",
+                rule=error,
+                line=1,
+                excerpt="Cloudflare Pages public deployment allowlist is missing or unsafe.",
+                classification=Classification.PUBLIC,
+            ))
     if production_mode:
         for surface in public_surfaces:
             masked_text = _mask_protected_ranges(surface)

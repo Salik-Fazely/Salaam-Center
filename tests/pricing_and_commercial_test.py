@@ -315,11 +315,11 @@ class EnrolmentJourneyTests(unittest.TestCase):
             "Plan selection",
             "Review terms and payment information",
             "Paid classes begin",
-            "Secure online trial booking is being prepared and is not yet open.",
+            "Continue in WhatsApp",
+            "prepared locally in your browser",
         ):
             self.assertIn(value, trial)
-        self.assertIn('data-prelaunch-disabled="true"', trial_page)
-        self.assertIn('<fieldset disabled>', trial_page)
+        self.assertIn('data-whatsapp-handoff="true"', trial_page)
         self.assertNotRegex(trial_page, r'<form\b[^>]+action=')
 
     def test_terms_privacy_and_success_remain_truthful_prelaunch_surfaces(self):
@@ -339,19 +339,24 @@ class EnrolmentJourneyTests(unittest.TestCase):
             "Final validity",
             "Consumer withdrawal treatment",
             "Final refund rules",
+            "A WhatsApp message is an enquiry",
+            "not a confirmed booking",
+            "no payment obligation",
         ):
             self.assertIn(value, terms)
 
         privacy = visible(source("privacy-policy/index.html"))
-        self.assertIn("No live booking submissions are accepted.", privacy)
+        self.assertIn("does not submit or store", privacy)
+        self.assertIn("locally in your browser", privacy)
+        self.assertIn("WhatsApp is a third-party service", privacy)
         self.assertIn("No payment collection is active.", privacy)
         self.assertIn("No analytics are used.", privacy)
-        self.assertIn("No active Formspree endpoint is connected.", privacy)
+        self.assertNotIn("Formspree", privacy)
 
         success = visible(source("success/index.html"))
-        self.assertIn("No request has been submitted", success)
-        self.assertIn("No payment has been completed.", success)
-        self.assertIn("No enrolment has been created.", success)
+        self.assertIn("Continue your conversation in WhatsApp", success)
+        self.assertIn("cannot confirm", success)
+        self.assertIn("not booked until Salaam Center confirms", success)
 
     def test_program_comparison_table_has_caption_and_keyboard_scroll_region(self):
         page = source("programs/index.html")

@@ -6,6 +6,20 @@ This is the internal operational source of truth for the Salaam Center noindex p
 
 `SALAM-CENTER-APPROVED-FACTS.md` remains the concise factual authority. If later legal, accounting or operational approval changes this model, both documents and the public regression fixtures must be updated together.
 
+## Approved initial contact and hosting architecture
+
+- WhatsApp is the only initial public contact channel. The exact approved digits-only WhatsApp Business number is `34614401172`, displayed as `+34 614 401 172`, with `https://wa.me/34614401172` as the generic public destination.
+- Domain email is not required. `hello@salaam.center`, public email links and telephone-call links are not part of the initial architecture.
+- Formspree is superseded and inactive. There is no form provider, form endpoint, backend, database or WhatsApp Business Platform API.
+- The website validates the eight approved fields and prepares the message locally in the adult visitor's browser. It does not submit or store the information on a Salaam Center server and does not send automatically. The visitor reviews the prepared message and must press Send inside WhatsApp.
+- WhatsApp is a separate third-party service. The adult visitor should review the prepared message and WhatsApp's own privacy information before deliberately sending, and must not include sensitive information.
+- A WhatsApp message is an enquiry, not a confirmed booking. It creates no payment obligation. A trial exists only after Salaam Center confirms a suitable teacher and schedule.
+- A parent or guardian must make the enquiry and remain the primary contact for a minor; a child is never invited to contact a teacher privately.
+- Initial launch has no analytics, no advertising pixels and no payments or public checkout.
+- Cloudflare Pages is the production hosting source of truth. Project `salaam-center` deploys automatically from GitHub `main` to `salaam.center` and `www.salaam.center`.
+- Repository-root output is constrained by a fail-closed static `_redirects` public-route allowlist. Exact reviewed URLs proxy to distinct committed `site-runtime/` backing artifacts, whose bytes must match their reviewed sources. A final catchall proxies every case-changed, encoded, repository-only and future unknown path to a guaranteed-missing sentinel, causing Cloudflare Pages to render the styled root error template with HTTP 404 without serving the requested file. Preflight rejects route drift, mirror drift and unclassified files. This uses no Pages Function, `_worker.js`, form backend or Cloudflare dashboard change.
+- The reconciled remote `Create CNAME` commit added only `salaam.center`; the unnecessary repository CNAME was removed through a forward change. GitHub Pages must not be configured, DNS must not be changed through this repository, and no Cloudflare or DNS configuration change belongs to this migration.
+
 ## Approved offer scope
 
 The approved priced offer covers only:
@@ -51,17 +65,18 @@ Public copy uses euro savings, not percentage badges. The exact percentages are 
 - The parent or guardian should be available at the beginning and end when requested.
 - An adult woman learner may be the primary contact.
 - A child is never invited to submit personal contact information or contact a teacher privately.
-- The current page is non-submitting and repeated free trials are not offered in public wording.
+- The website prepares a WhatsApp enquiry locally; the adult visitor must review it and press Send. The website cannot confirm that Send was pressed, and repeated free trials are not offered in public wording.
 
 ## Enrolment and payment sequence
 
 1. Explore the programs.
-2. Attend the free 40-minute trial and discuss learning direction.
-3. Receive an initial program and format recommendation.
-4. Confirm teacher availability, schedule and plan.
-5. Review the complete terms and payment information.
-6. Pay the selected plan in full before the first paid class.
-7. Begin paid lessons.
+2. Prepare a WhatsApp trial enquiry and deliberately press Send inside WhatsApp.
+3. Confirm a suitable teacher and schedule; the enquiry itself is not a booking.
+4. Attend the free 40-minute trial and discuss learning direction.
+5. Receive an initial program and format recommendation.
+6. Confirm the plan, then review the complete terms and payment information.
+7. Pay the selected plan in full before the first paid class.
+8. Begin paid lessons.
 
 There is no automatic online enrolment, public checkout, saved-card subscription, instalment plan, payment button or named provider. Payment instructions are provided only after the trial, teacher availability and schedule are confirmed. EUR is the only approved displayed currency; no conversion or exchange-rate claim is approved. Tax treatment remains unresolved.
 
@@ -123,7 +138,7 @@ The class normally ends at its original scheduled time. The teacher need not ext
 - Parent or adult-learner communication.
 - Teacher-cancellation protection.
 
-No communication platform is approved or named.
+No lesson-delivery or private-family communication platform is approved or named by this benefit. The public WhatsApp enquiry channel does not decide the later lesson-delivery platform.
 
 ## Additional 12-week benefits
 
@@ -256,11 +271,13 @@ This conclusion addresses direct teacher cost only. It is not a claim of final p
 - **Legal-entity information** — unresolved.
 - **Final Terms and Conditions** — unresolved.
 - **Final Privacy Policy** — unresolved.
-- **Contact mailbox** — `hello@salaam.center` is approved as the single intended public address but inbound and outbound verification remain unresolved.
-- **Live form and backend** — Formspree is planned but no account, endpoint or backend is approved or active.
+- **Contact mailbox** — superseded for initial launch; domain email is not required because WhatsApp is the only public contact route.
+- **Live form and backend** — Formspree is superseded; the approved browser-local WhatsApp handoff has no backend, endpoint, storage or automatic message sending.
 - **Analytics** — initial launch is explicitly approved with no analytics and no advertising pixels.
 - **Production SEO** — production-origin metadata and an unsubmitted sitemap are prepared; pages remain noindex and crawling remains blocked.
-- **Deployment approval** — unresolved; no Pages, workflow, CNAME, domain, DNS, Search Console or publishing action is authorized.
+- **Deployment approval** — Cloudflare Pages deployment from `main`, the custom domains and HTTPS are active. GitHub Pages and a repository CNAME are prohibited; production indexing, final legal approvals and the manual WhatsApp live-link check remain unresolved.
+
+- **Deployment-surface containment** — `_redirects` must remain the exact reviewed public-route allowlist, the `site-runtime/` backing artifacts must remain byte-identical to their sources, and the missing catchall sentinel must remain absent. Preflight and trust scanning must fail on route drift, mirror drift, unclassified files or any Pages Functions surface.
 
 ## Change control
 
@@ -269,6 +286,6 @@ Any change to price, scope, class count, validity, trial, absence rules, benefit
 ## Initial launch privacy and storage position
 
 - Initial launch uses no analytics and no advertising pixels, so no analytics-consent banner is required.
-- Essential browser storage is limited to short-lived form-success state and interface behavior. It is not an analytics mechanism.
+- Trial-form values are not written to `localStorage` or `sessionStorage`, and there is no form-success marker. Values remain in the page only while the adult visitor prepares the handoff and are included in WhatsApp's click-to-chat URL only after deliberate activation.
 - Video playback remains user-activated and uses the privacy-enhanced YouTube domain.
 - Any future analytics proposal requires a separate future approval and privacy review.

@@ -74,9 +74,7 @@ def visible_text(relative_path):
 
 
 def public_html_files():
-    complete = [path for path in ROOT.rglob("index.html")]
-    root_pages = [path for path in ROOT.glob("*.html")]
-    return tuple(sorted({*complete, *root_pages}))
+    return tuple(ROOT / relative_path for relative_path in CORE_PAGES)
 
 
 class HeadAndNavigationParser(HTMLParser):
@@ -203,17 +201,18 @@ class IntegrationAndMetadataSafetyTests(unittest.TestCase):
         ):
             self.assertNotIn(value, executable)
 
-    def test_no_active_form_or_unapproved_contact_destination_exists(self):
+    def test_only_the_approved_client_side_whatsapp_contact_destination_exists(self):
         public = "\n".join(path.read_text(encoding="utf-8") for path in public_html_files())
         trial = source("book-trial/index.html")
         self.assertEqual(1, len(re.findall(r"<form\b", public)))
-        self.assertIn('data-prelaunch-disabled="true"', trial)
-        self.assertIn('data-endpoint=""', trial)
-        self.assertIn('<fieldset disabled>', trial)
+        self.assertIn('data-whatsapp-handoff="true"', trial)
         self.assertNotRegex(trial, r'<form\b[^>]+action=')
-        for value in ("script.google.com", "wa.me/", "api.whatsapp.com", "tel:"):
+        self.assertNotRegex(trial, r'<form\b[^>]+method=["\']?post')
+        self.assertIn("https://wa.me/34614401172", public)
+        for url in re.findall(r"https://wa\.me/[^\s\"'<>]+", public):
+            self.assertEqual("https://wa.me/34614401172", url)
+        for value in ("script.google.com", "api.whatsapp.com", "mailto:", "tel:"):
             self.assertNotIn(value, public)
-        self.assertEqual(public.count("mailto:"), public.count("mailto:hello@salaam.center"))
         self.assertFalse((ROOT / "apps-script/Code.gs").exists())
 
     def test_no_production_or_deployment_files_are_present(self):
@@ -260,27 +259,30 @@ class ProgramAndPrelaunchContentTests(unittest.TestCase):
             r"€\s*\d|\d\s*€",
         )
 
-    def test_trial_page_is_informative_and_cannot_collect_personal_data_prelaunch(self):
+    def test_trial_page_prepares_whatsapp_locally_without_collecting_child_contact_data(self):
         page = source("book-trial/index.html")
         text = visible_text("book-trial/index.html")
-        self.assertIn("Secure online trial booking is being prepared and is not yet open.", text)
-        self.assertIn("The fields below show what the future request form will ask.", text)
-        self.assertIn('data-prelaunch-disabled="true"', page)
-        self.assertIn('<fieldset disabled>', page)
+        self.assertIn("Continue in WhatsApp", text)
+        self.assertIn("prepared locally", text)
+        self.assertIn('data-whatsapp-handoff="true"', page)
         self.assertNotRegex(page, r'<form\b[^>]+action=')
+        self.assertNotRegex(page, r'(?i)name="(?:email|phone|learner_(?:name|first_name|surname))"')
 
     def test_submission_status_never_claims_a_request_was_sent(self):
         text = visible_text("success/index.html")
-        self.assertIn("No request has been submitted", text)
-        for claim in ("Thank you", "successfully submitted", "we received your request"):
+        self.assertIn("Continue your conversation in WhatsApp", text)
+        self.assertIn("cannot confirm", text)
+        for claim in ("Thank you", "successfully submitted", "we received your request", "message sent", "trial confirmed"):
             self.assertNotIn(claim.lower(), text.lower())
 
     def test_privacy_and_terms_are_honest_placeholders(self):
         privacy = visible_text("privacy-policy/index.html")
         terms = visible_text("terms/index.html")
-        self.assertIn("Privacy information before enrolment opens", privacy)
-        self.assertIn("No live booking submissions are accepted", privacy)
+        self.assertIn("Pre-launch privacy information", privacy)
+        self.assertIn("does not submit or store", privacy)
+        self.assertIn("locally in your browser", privacy)
         self.assertIn("Terms and conditions are being prepared", terms)
+        self.assertIn("A WhatsApp message is an enquiry", terms)
         self.assertIn(
             "Complete terms will be provided before any payment is accepted.",
             terms,

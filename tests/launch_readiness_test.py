@@ -11,6 +11,8 @@ import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
 
+from scripts.deployment_boundary import expected_redirect_rules, public_backing_pairs
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "config/launch-readiness.json"
@@ -65,23 +67,41 @@ def parse_head(relative):
 
 
 class LaunchConfigurationTests(unittest.TestCase):
-    def test_prelaunch_configuration_is_strict_and_inactive(self):
+    def test_prelaunch_configuration_is_strict_cloudflare_whatsapp_only(self):
         data = json.loads(CONFIG.read_text(encoding="utf-8"))
         self.assertEqual("prelaunch", data["site_mode"])
         self.assertEqual("https://salaam.center", data["production_origin"])
-        self.assertEqual("hello@salaam.center", data["contact_email"])
-        self.assertEqual("formspree", data["booking_provider"])
+        self.assertEqual(["salaam.center", "www.salaam.center"], data["production_domains"])
+        self.assertEqual("cloudflare_pages", data["hosting_source"])
+        self.assertEqual("salaam-center", data["cloudflare_pages_project"])
+        self.assertIs(data["automatic_deployment_from_main"], True)
+        self.assertEqual("static_public_route_allowlist", data["deployment_surface_mode"])
+        self.assertIs(data["pages_functions_enabled"], False)
+        self.assertIs(data["production_domains_active"], True)
+        self.assertIs(data["https_confirmed"], True)
+        self.assertEqual("whatsapp", data["contact_channel"])
+        self.assertEqual("34614401172", data["whatsapp_number"])
+        self.assertRegex(data["whatsapp_number"], r"^[1-9]\d{7,14}$")
+        self.assertIs(data["whatsapp_number_verified"], True)
+        self.assertIs(data["whatsapp_link_verified"], True)
+        self.assertIs(data["whatsapp_live_link_tested"], False)
+        self.assertEqual("client_side_whatsapp_handoff", data["form_submission_mode"])
+        self.assertEqual("none", data["booking_provider"])
         self.assertEqual("", data["booking_endpoint"])
         self.assertEqual("none", data["analytics_mode"])
-        for key in (
-            "contact_email_verified", "booking_endpoint_verified",
-            "formspree_domain_restriction_confirmed", "privacy_policy_final_approved",
-            "terms_final_approved", "domain_verified_with_github",
-            "github_pages_enabled", "dns_configured", "https_confirmed",
-            "search_console_enabled",
-        ):
+        for key in ("privacy_policy_final_approved", "terms_final_approved",
+                    "github_pages_enabled", "cname_required", "search_console_enabled"):
             self.assertIs(data[key], False, key)
-        self.assertNotRegex(CONFIG.read_text(encoding="utf-8"), r"(?i)(api[_-]?key|token|password|secret)")
+        for obsolete in (
+            "contact_email", "contact_email_verified", "booking_endpoint_verified",
+            "formspree_domain_restriction_confirmed", "domain_verified_with_github",
+            "dns_configured",
+        ):
+            self.assertNotIn(obsolete, data)
+        self.assertNotRegex(
+            CONFIG.read_text(encoding="utf-8"),
+            r"(?i)(api[_-]?key|access[_-]?token|password|secret)",
+        )
 
 
 class PreflightTests(unittest.TestCase):
@@ -97,6 +117,10 @@ class PreflightTests(unittest.TestCase):
         after = {p: p.stat().st_mtime_ns for p in ROOT.rglob("*") if p.is_file()}
         self.assertEqual(0, result.returncode, result.stdout + result.stderr)
         self.assertIn("PASS: prelaunch readiness", result.stdout)
+        self.assertIn(
+            "PASS: unreviewed repository paths fail closed with styled HTTP 404",
+            result.stdout,
+        )
         self.assertEqual(before, after)
 
     def test_production_reports_expected_external_and_legal_blockers(self):
@@ -110,23 +134,14 @@ class PreflightTests(unittest.TestCase):
         }
         self.assertEqual({
             "site_mode is production",
-            "contact_email_verified is true",
-            "booking_endpoint is a verified HTTPS Formspree form-ID URL",
-            "booking_endpoint_verified is true",
-            "formspree_domain_restriction_confirmed is true",
             "legal_controller_name is present",
             "legal_controller_address is present",
             "privacy_policy_final_approved is true",
             "terms_final_approved is true",
-            "domain_verified_with_github is true",
-            "github_pages_enabled is true",
-            "dns_configured is true",
-            "https_confirmed is true",
+            "whatsapp_live_link_tested is true",
             "noindex, nofollow removed from production pages",
             "robots.txt allows intended crawling",
             "no placeholder strings remain",
-            "active booking form",
-            "CNAME contains only salaam.center",
         }, failures)
 
     def test_invalid_json_and_unknown_mode_fail_safely(self):
@@ -139,61 +154,68 @@ class PreflightTests(unittest.TestCase):
         result = self.run_preflight("staging")
         self.assertNotEqual(0, result.returncode)
 
-    def test_invalid_formspree_endpoints_are_explicit_production_failures(self):
+    def test_wrong_malformed_and_placeholder_whatsapp_numbers_fail(self):
         base = json.loads(CONFIG.read_text(encoding="utf-8"))
-        for endpoint in (
-            "https://formspree.io/f/FORM_ID",
-            "https://example.com/f/abc123",
-            "http://formspree.io/f/abc123",
-            "https://formspree.io/hello@salaam.center",
+        for number in (
+            "WHATSAPP_NUMBER_DIGITS",
+            "+34614401172",
+            "34 614 401 172",
+            "34614401173",
+            "123",
         ):
-            with self.subTest(endpoint=endpoint), tempfile.TemporaryDirectory() as directory:
+            with self.subTest(number=number), tempfile.TemporaryDirectory() as directory:
                 config = Path(directory) / "config.json"
-                config.write_text(json.dumps({**base, "site_mode": "production", "booking_endpoint": endpoint}), encoding="utf-8")
-                result = self.run_preflight("production", config)
-                self.assertNotEqual(0, result.returncode)
-                self.assertIn("booking_endpoint", result.stdout)
-
-    def test_prelaunch_rejects_every_claimed_activation_flag(self):
-        base = json.loads(CONFIG.read_text(encoding="utf-8"))
-        flags = (
-            "contact_email_verified", "booking_endpoint_verified",
-            "formspree_domain_restriction_confirmed", "privacy_policy_final_approved",
-            "terms_final_approved", "domain_verified_with_github",
-            "github_pages_enabled", "dns_configured", "https_confirmed",
-            "search_console_enabled",
-        )
-        for flag in flags:
-            with self.subTest(flag=flag), tempfile.TemporaryDirectory() as directory:
-                config = Path(directory) / "config.json"
-                config.write_text(json.dumps({**base, flag: True}), encoding="utf-8")
+                config.write_text(json.dumps({**base, "whatsapp_number": number}), encoding="utf-8")
                 result = self.run_preflight("prelaunch", config)
                 self.assertNotEqual(0, result.returncode)
-                self.assertIn(flag, result.stdout)
+                self.assertIn("whatsapp_number", result.stdout)
+
+    def test_prelaunch_rejects_architecture_mismatches(self):
+        base = json.loads(CONFIG.read_text(encoding="utf-8"))
+        cases = (
+            ({"whatsapp_number_verified": False}, "whatsapp_number_verified is true"),
+            ({"whatsapp_link_verified": False}, "whatsapp_link_verified is true"),
+            ({"production_domains_active": False}, "production domains are active"),
+            ({"automatic_deployment_from_main": False}, "automatic deployment from main is enabled"),
+            ({"deployment_surface_mode": "repository_root"}, "deployment surface uses static public-route allowlist"),
+            ({"pages_functions_enabled": True}, "Cloudflare Pages Functions remain disabled"),
+            ({"https_confirmed": False}, "HTTPS is confirmed"),
+            ({"github_pages_enabled": True}, "GitHub Pages is disabled"),
+            ({"cname_required": True}, "CNAME is not required"),
+            ({"booking_provider": "formspree"}, "booking_provider is none"),
+            ({"booking_endpoint": "https://example.test/form"}, "booking_endpoint is empty"),
+            ({"analytics_mode": "active"}, "analytics_mode remains none"),
+        )
+        for patch, expected in cases:
+            with self.subTest(patch=patch), tempfile.TemporaryDirectory() as directory:
+                config = Path(directory) / "config.json"
+                config.write_text(json.dumps({**base, **patch}), encoding="utf-8")
+                result = self.run_preflight("prelaunch", config)
+                self.assertNotEqual(0, result.returncode)
+                self.assertIn(expected, result.stdout)
 
     def test_a_complete_future_production_state_is_logically_passable(self):
         spec = importlib.util.spec_from_file_location("launch_preflight_under_test", PREFLIGHT)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        endpoint = "https://formspree.io/f/abc123"
         config = json.loads(CONFIG.read_text(encoding="utf-8"))
         config.update({
             "site_mode": "production",
-            "contact_email_verified": True,
-            "booking_endpoint": endpoint,
-            "booking_endpoint_verified": True,
-            "formspree_domain_restriction_confirmed": True,
             "legal_controller_name": "Approved Operator",
             "legal_controller_address": "Approved disclosure address",
             "privacy_policy_final_approved": True,
             "terms_final_approved": True,
-            "domain_verified_with_github": True,
-            "github_pages_enabled": True,
-            "dns_configured": True,
-            "https_confirmed": True,
+            "whatsapp_live_link_tested": True,
         })
+        generic_link = (
+            f'<a href="{module.WHATSAPP_URL}" target="_blank" '
+            'rel="noopener noreferrer">WhatsApp</a>'
+        )
         bases = {
-            page: f'<link rel="canonical" href="{module.PRODUCTION_ORIGIN + module.ROUTES[page]}">'
+            page: (
+                f'<link rel="canonical" href="{module.PRODUCTION_ORIGIN + module.ROUTES[page]}">'
+                + generic_link
+            )
             for page in PUBLIC_PAGES
         }
         source = dict(bases)
@@ -201,19 +223,33 @@ class PreflightTests(unittest.TestCase):
         source["pricing/index.html"] += " ".join(module.APPROVED_PRICES)
         source["book-trial/index.html"] = (
             bases["book-trial/index.html"]
-            + f'<form data-endpoint="{endpoint}" data-endpoint-verified="true">'
-            + '<button type="submit">Request</button></form>'
+            + '<form data-whatsapp-handoff="true">'
+            + '<button type="button" data-whatsapp-submit>Continue in WhatsApp</button></form>'
         )
-        protected_success = (
+        truthful_success = (
             bases["success/index.html"]
-            + '<div data-success-state="direct"></div>'
-            + '<div data-success-state="confirmed" hidden></div>'
+            + "<h1>Continue your conversation in WhatsApp</h1>"
+            + "<p>The website cannot confirm whether you pressed Send.</p>"
+            + "<p>The trial is not booked until Salaam Center confirms teacher and schedule availability.</p>"
         )
-        source["success/index.html"] = protected_success
+        source["success/index.html"] = truthful_success
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             (root / "assets/js").mkdir(parents=True)
+            (root / "assets/css").mkdir(parents=True)
+            (root / "assets/logo").mkdir(parents=True)
+            for page, markup in source.items():
+                target = root / page
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(markup, encoding="utf-8")
+            (root / "assets/css/styles.css").write_text("", encoding="utf-8")
+            (root / "assets/logo/salaam-center-favicon.svg").write_text("", encoding="utf-8")
+            redirects_path = root / "_redirects"
+            redirects_path.write_text(
+                "\n".join(expected_redirect_rules()) + "\n",
+                encoding="utf-8",
+            )
             (root / "robots.txt").write_text(
                 "User-agent: *\nAllow: /\nSitemap: https://salaam.center/sitemap.xml\n",
                 encoding="utf-8",
@@ -224,16 +260,18 @@ class PreflightTests(unittest.TestCase):
                 f'<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{sitemap_entries}</urlset>',
                 encoding="utf-8",
             )
-            protected_script = (
-                "sessionStorage.getItem(markerKey); sessionStorage.removeItem(markerKey); "
-                "if (marker.confirmed !== true) return; "
-                "if (!response.ok || payload.ok !== true) throw new Error(); "
-                "sessionStorage.setItem(markerKey, JSON.stringify({ confirmed: true, at: Date.now() })); "
-                'window.location.assign("/success/");'
+            handoff_script = (
+                f'var url = "{module.WHATSAPP_URL}?text=" + encodeURIComponent(message); '
+                'var popup = window.open(url, "_blank"); '
+                "if (popup) popup.opener = null; else window.location.assign(url);"
             )
             script_path = root / "assets/js/trial-form.js"
-            script_path.write_text(protected_script, encoding="utf-8")
-            (root / "CNAME").write_text("salaam.center\n", encoding="utf-8")
+            script_path.write_text(handoff_script, encoding="utf-8")
+            (root / "assets/js/main.js").write_text("", encoding="utf-8")
+            for source_path, backing_path in public_backing_pairs():
+                target = root / backing_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((root / source_path).read_bytes())
             module.ROOT = root
             result = module.Result()
             output = io.StringIO()
@@ -242,27 +280,66 @@ class PreflightTests(unittest.TestCase):
             self.assertEqual([], result.failures, output.getvalue())
             self.assertIn("PASS: production readiness", output.getvalue())
 
-            source["success/index.html"] = bases["success/index.html"] + '<div data-success-state="confirmed"></div>'
-            script_path.write_text("sessionStorage.setItem('confirmed', 'true');", encoding="utf-8")
-            unprotected = module.Result()
+            redirects_path.unlink()
+            missing_boundary = module.Result()
             with contextlib.redirect_stdout(io.StringIO()):
-                module.production(config, source, unprotected)
-            self.assertIn("success flow requires confirmed submission", unprotected.failures)
+                module.production(config, source, missing_boundary)
+            self.assertIn(
+                "unreviewed repository paths fail closed with styled HTTP 404",
+                missing_boundary.failures,
+            )
+            redirects_path.write_text(
+                "\n".join(expected_redirect_rules()) + "\n",
+                encoding="utf-8",
+            )
 
-            source["success/index.html"] = protected_success
-            source["contact/index.html"] += " Mailbox verification remains pending."
-            script_path.write_text(protected_script, encoding="utf-8")
-            stale_copy = module.Result()
+            source["success/index.html"] = bases["success/index.html"] + "<h1>Message Sent</h1>"
+            false_success = module.Result()
             with contextlib.redirect_stdout(io.StringIO()):
-                module.production(config, source, stale_copy)
-            self.assertIn("no placeholder strings remain", stale_copy.failures)
+                module.production(config, source, false_success)
+            self.assertIn("Success page remains truthful", false_success.failures)
+
+            source["success/index.html"] = truthful_success
+            source["contact/index.html"] += " Contact us at hello@example.test."
+            public_email = module.Result()
+            with contextlib.redirect_stdout(io.StringIO()):
+                module.production(config, source, public_email)
+            self.assertIn("no public email contact", public_email.failures)
 
             source["contact/index.html"] = bases["contact/index.html"]
-            placeholder_legal = module.Result()
-            with contextlib.redirect_stdout(io.StringIO()):
-                module.production({**config, "legal_controller_name": "TBD"}, source, placeholder_legal)
-            self.assertIn("no placeholder strings remain", placeholder_legal.failures)
+            for unsafe_network in (
+                "fetch('/submit');",
+                "navigator.sendBeacon('/collect', value);",
+                "new Image().src = '/collect?value=' + value;",
+            ):
+                with self.subTest(unsafe_network=unsafe_network):
+                    script_path.write_text(
+                        handoff_script + " " + unsafe_network,
+                        encoding="utf-8",
+                    )
+                    network_submission = module.Result()
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        module.production(config, source, network_submission)
+                    self.assertIn(
+                        "no browser network submission",
+                        network_submission.failures,
+                    )
+                    self.assertIn(
+                        "safe client-side WhatsApp handoff",
+                        network_submission.failures,
+                    )
 
+            (root / "assets/js/main.js").write_text(
+                "iframe.src = 'https://www.youtube-nocookie.com/embed/video';",
+                encoding="utf-8",
+            )
+            script_path.write_text(handoff_script, encoding="utf-8")
+            safe_video = module.Result()
+            with contextlib.redirect_stdout(io.StringIO()):
+                module.production(config, source, safe_video)
+            self.assertNotIn("no browser network submission", safe_video.failures)
+
+            script_path.write_text(handoff_script, encoding="utf-8")
             sitemap_path.write_text(f'<?xml version="1.0"?><urlset>{sitemap_entries}</urlset>', encoding="utf-8")
             invalid_sitemap = module.Result()
             with contextlib.redirect_stdout(io.StringIO()):
@@ -319,7 +396,7 @@ class MetadataAndSitemapTests(unittest.TestCase):
         organization = next(item for item in graph if item["@type"] == "EducationalOrganization")
         self.assertEqual("Salaam Center", organization["name"])
         self.assertEqual("https://salaam.center/", organization["url"])
-        self.assertEqual("hello@salaam.center", organization["email"])
+        self.assertNotIn("email", organization)
         serialized = json.dumps(data).casefold()
         for unsupported in (
             "aggregaterating", "review", "ratingvalue", "telephone", "address",
@@ -333,19 +410,29 @@ class ContactAndPolicyTests(unittest.TestCase):
         contact = (ROOT / "contact/index.html").read_text(encoding="utf-8")
         footer = (ROOT / "partials/footer.html").read_text(encoding="utf-8")
         self.assertIn("Contact Salaam Center", contact)
-        self.assertIn('href="mailto:hello@salaam.center"', contact)
+        self.assertIn('href="https://wa.me/34614401172"', contact)
+        self.assertIn('target="_blank"', contact)
+        self.assertIn('rel="noopener noreferrer"', contact)
         self.assertIn("parent or guardian", contact.lower())
         self.assertIn('href="/contact/"', footer)
-        self.assertNotRegex(contact, r"(?i)(whatsapp|\btel:|phone number|office hours|instagram|facebook)")
+        self.assertNotRegex(contact + footer, r"(?i)mailto:|\btel:|hello@salaam\.center")
 
     def test_privacy_terms_and_no_analytics_position_are_explicit(self):
         privacy = (ROOT / "privacy-policy/index.html").read_text(encoding="utf-8")
         terms = (ROOT / "terms/index.html").read_text(encoding="utf-8")
         docs = "\n".join((ROOT / path).read_text(encoding="utf-8") for path in (
             "SALAM-CENTER-APPROVED-FACTS.md", "docs/COMMERCIAL-AND-ENROLMENT.md"))
-        for phrase in ("No live booking submissions", "No analytics", "No advertising trackers", "Formspree", "controller identity", "retention"):
+        for phrase in (
+            "locally in your browser", "does not submit or store", "WhatsApp",
+            "third-party service", "No analytics", "No advertising pixels",
+            "controller identity",
+        ):
             self.assertIn(phrase.casefold(), privacy.casefold())
-        for phrase in ("not the final contractual Terms and Conditions", "Legal operator identity", "Consumer withdrawal", "Payment provider", "Final effective date"):
+        self.assertNotIn("formspree", privacy.casefold())
+        for phrase in (
+            "not the final contractual Terms and Conditions", "WhatsApp message is an enquiry",
+            "not a confirmed booking", "no payment obligation", "Legal operator identity",
+        ):
             self.assertIn(phrase.casefold(), terms.casefold())
         self.assertIn("no analytics", docs.casefold())
         self.assertIn("no advertising pixels", docs.casefold())
@@ -353,16 +440,17 @@ class ContactAndPolicyTests(unittest.TestCase):
 
     def test_approved_facts_do_not_contradict_the_locked_contact_decision(self):
         facts = (ROOT / "SALAM-CENTER-APPROVED-FACTS.md").read_text(encoding="utf-8")
-        self.assertNotIn("No Salaam Center email address", facts)
-        self.assertIn("single planned public mailbox is `hello@salaam.center`", facts)
-        self.assertIn("production-origin metadata and an unsubmitted sitemap are prepared", facts)
+        self.assertIn("WhatsApp is the only initial public contact channel", facts)
+        self.assertIn("`34614401172`", facts)
+        self.assertIn("Domain email is not required", facts)
+        self.assertIn("Formspree is superseded", facts)
+        self.assertIn("Cloudflare Pages is the production hosting source of truth", facts)
 
-    def test_disabled_preview_banner_is_scoped_to_the_outer_form_fieldset(self):
+    def test_obsolete_disabled_form_honeypot_and_acknowledgement_styles_are_removed(self):
         css = (ROOT / "assets/css/styles.css").read_text(encoding="utf-8")
-        self.assertIn(".trial-form > fieldset:disabled {", css)
-        self.assertNotRegex(css, r"(?m)^\.trial-form fieldset:disabled \{")
-        self.assertIn(".trial-form > fieldset:disabled::before", css)
-        self.assertNotRegex(css, r"(?m)^\.trial-form fieldset:disabled::before")
+        self.assertNotIn(".trial-form > fieldset:disabled", css)
+        self.assertNotIn(".acknowledgement", css)
+        self.assertNotIn(".honeypot", css)
 
 
 if __name__ == "__main__":

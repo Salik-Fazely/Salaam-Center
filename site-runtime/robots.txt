@@ -1,0 +1,4 @@
+# Salaam Center pre-launch indexing protection.
+# Keep this block until an explicitly approved deployment and SEO phase.
+User-agent: *
+Disallow: /

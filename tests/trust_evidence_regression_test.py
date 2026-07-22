@@ -3,6 +3,7 @@ import re
 from tempfile import TemporaryDirectory
 import unittest
 
+from scripts.deployment_boundary import expected_redirect_rules
 from scripts.trust_evidence_scanner import (
     Classification,
     Finding,
@@ -501,6 +502,17 @@ class ClaimRuleTests(unittest.TestCase):
             self.assertTrue(result)
             self.assertTrue(all(not item.is_failure for item in result))
 
+        superseded = scan_surface(
+            SurfaceText(
+                Path("docs/LAUNCH-ACTIVATION-CHECKLIST.md"),
+                SurfaceType.HTML,
+                "Formspree is superseded and inactive.",
+                classification=Classification.DOCUMENTATION_ONLY,
+            )
+        )
+        self.assertIn("active Formspree endpoint", {item.category for item in superseded})
+        self.assertTrue(all(not item.is_failure for item in superseded))
+
     def test_unassociated_individual_experience_and_combined_total_fail(self):
         for value in (
             "2 years teaching Tajweed and Tafsir",
@@ -858,6 +870,151 @@ class ClaimRuleTests(unittest.TestCase):
                 if item.category == "active form or contact destination"
             ))
 
+    def test_exact_whatsapp_handoff_form_and_links_are_permitted(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "index.html").write_text(
+                '<form data-whatsapp-handoff="true" novalidate>'
+                '<input name="contact_name" maxlength="80" required>'
+                '<button type="button" data-whatsapp-submit>Continue in WhatsApp</button>'
+                '</form>'
+                '<a href="https://wa.me/34614401172" target="_blank" '
+                'rel="noopener noreferrer">WhatsApp</a>',
+                encoding="utf-8",
+            )
+            surfaces, _, _ = extract_public_surfaces(root, ("index.html",))
+            result = tuple(item for surface in surfaces for item in scan_surface(surface))
+            self.assertEqual((), result)
+
+        self.assertEqual((), findings("https://wa.me/34614401172"))
+        self.assertEqual((), findings(
+            'var url = "https://wa.me/34614401172?text=" + encodeURIComponent(message);',
+            SurfaceType.EXECUTABLE_JAVASCRIPT,
+        ))
+
+    def test_whatsapp_handoff_marker_does_not_bypass_form_safety(self):
+        unsafe_forms = (
+            '<form data-whatsapp-handoff="true" action="/submit">'
+            '<button type="button" data-whatsapp-submit>Continue</button></form>',
+            '<form data-whatsapp-handoff="true" method="post">'
+            '<button type="button" data-whatsapp-submit>Continue</button></form>',
+            '<form data-whatsapp-handoff="true">'
+            '<button type="submit">Continue</button></form>',
+            '<form data-whatsapp-handoff="true"></form>',
+        )
+        for markup in unsafe_forms:
+            with self.subTest(markup=markup), TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / "index.html").write_text(markup, encoding="utf-8")
+                surfaces, _, _ = extract_public_surfaces(root, ("index.html",))
+                categories = {
+                    item.category
+                    for surface in surfaces
+                    for item in scan_surface(surface)
+                }
+                self.assertIn("active form or contact destination", categories)
+
+    def test_inline_javascript_is_scanned_as_executable_code(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "index.html").write_text(
+                '<button onclick="fetch(\'/trial\')">Continue</button>'
+                '<a href="javascript:new XMLHttpRequest()">Fallback</a>',
+                encoding="utf-8",
+            )
+            surfaces, _, _ = extract_public_surfaces(root, ("index.html",))
+            network_findings = tuple(
+                item
+                for surface in surfaces
+                for item in scan_surface(surface)
+                if item.category == "network form submission"
+            )
+            self.assertEqual(2, len(network_findings))
+            self.assertTrue(all(
+                item.surface is SurfaceType.EXECUTABLE_JAVASCRIPT
+                for item in network_findings
+            ))
+
+    def test_whatsapp_handoff_scanner_rejects_wrong_destinations_and_unsafe_automation(self):
+        cases = (
+            ("https://wa.me/34614401173", "unapproved WhatsApp destination"),
+            ("https://wa.me/34614401172?utm_source=site", "unapproved WhatsApp destination"),
+            ("http://wa.me/34614401172", "unapproved WhatsApp destination"),
+            ("//wa.me/34614401172", "unapproved WhatsApp destination"),
+            ("wa.me/34614401172", "unapproved WhatsApp destination"),
+            ("https://wa.me:443/34614401172", "unapproved WhatsApp destination"),
+            ("https://chat.wa.me/34614401172", "unapproved WhatsApp destination"),
+            ("https://api.whatsapp.com/send?phone=34614401172", "unapproved WhatsApp destination"),
+            ("https://example.test/whatsapp/34614401172", "unapproved WhatsApp destination"),
+            ("https://bit.ly/whatsapp-chat", "unapproved WhatsApp destination"),
+            ("https://formspree.io/f/abc123", "active Formspree endpoint"),
+            ("//formspree.io/f/abc123", "active Formspree endpoint"),
+            ("formspree.io/f/abc123", "active Formspree endpoint"),
+            ("https://www.formspree.io/f/abc123", "active Formspree endpoint"),
+            ("Formspree", "active Formspree endpoint"),
+            ("mailto:hello@salaam.center", "email contact publication"),
+            ("hello@salaam.center", "email contact publication"),
+            ("fetch('/trial')", "network form submission"),
+            ("new XMLHttpRequest()", "network form submission"),
+            ("navigator.sendBeacon('/collect', value)", "network form submission"),
+            ("new Image().src = '/collect?value=' + value", "network form submission"),
+            ("sessionStorage.setItem('trial', value)", "personal-data storage"),
+            ("localStorage.setItem('trial', value)", "personal-data storage"),
+            ("const whatsappAccessToken = 'value'", "WhatsApp API credential"),
+            ("const whatsappApiToken = 'value'", "WhatsApp API credential"),
+            ("const WHATSAPP_API_TOKEN = 'value'", "WhatsApp API credential"),
+            ("Message Sent", "false message-sent confirmation"),
+            ("Your WhatsApp message was sent", "false message-sent confirmation"),
+            ("Your trial is booked", "false booking confirmation"),
+            ("Your trial is now booked", "false booking confirmation"),
+            ("We confirmed your booking", "false booking confirmation"),
+            (
+                "The website cannot verify this, but your trial is confirmed",
+                "false booking confirmation",
+            ),
+            (
+                "The website cannot verify this, but your WhatsApp message was sent",
+                "false message-sent confirmation",
+            ),
+            ("We automatically send the WhatsApp message", "automatic WhatsApp sending claim"),
+            ("The WhatsApp message is sent automatically", "automatic WhatsApp sending claim"),
+        )
+        for value, category in cases:
+            surface = (
+                SurfaceType.EXECUTABLE_JAVASCRIPT
+                if any(token in value.casefold() for token in (
+                    "fetch", "xmlhttprequest", "sendbeacon", "new image", "storage", "token"
+                ))
+                else SurfaceType.HTML
+            )
+            with self.subTest(value=value):
+                self.assertIn(category, {item.category for item in findings(value, surface)})
+
+        for safe in (
+            "The website does not automatically send a WhatsApp message.",
+            "The website cannot confirm whether the WhatsApp message was sent.",
+            "A free trial is confirmed only after teacher and schedule availability is confirmed.",
+            "The website cannot confirm whether the visitor pressed Send.",
+        ):
+            with self.subTest(safe=safe):
+                self.assertEqual((), findings(safe))
+
+        for safe_script in (
+            "iframe.src = 'https://www.youtube-nocookie.com/embed/video';",
+            "return env.ASSETS.fetch(request);",
+        ):
+            with self.subTest(safe_script=safe_script):
+                self.assertNotIn(
+                    "network form submission",
+                    {
+                        item.category
+                        for item in findings(
+                            safe_script,
+                            SurfaceType.EXECUTABLE_JAVASCRIPT,
+                        )
+                    },
+                )
+
     def test_launch_form_and_success_safety_rules_reject_unsafe_variants(self):
         unsafe = (
             ('<input name="child_email">', "forbidden form field"),
@@ -877,7 +1034,10 @@ class ClaimRuleTests(unittest.TestCase):
         for value, category in unsafe:
             with self.subTest(value=value):
                 self.assertIn(category, {item.category for item in findings(value)})
-        self.assertEqual((), findings('href="mailto:hello@salaam.center"'))
+        self.assertIn(
+            "email contact publication",
+            {item.category for item in findings('href="mailto:hello@salaam.center"')},
+        )
 
     def test_unsupported_legal_identity_and_postal_address_are_rejected(self):
         cases = (
@@ -903,6 +1063,63 @@ class ClaimRuleTests(unittest.TestCase):
 
 
 class RepositoryTrustEvidenceTests(unittest.TestCase):
+    def test_repository_scan_fails_when_cloudflare_deployment_boundary_is_missing(self):
+        from scripts.deployment_boundary import PUBLIC_PAGE_SOURCES, public_backing_pairs
+
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "docs").mkdir()
+            (root / "config").mkdir()
+            (root / "assets/css").mkdir(parents=True)
+            (root / "assets/js").mkdir(parents=True)
+            (root / "assets/logo").mkdir(parents=True)
+            for relative in PUBLIC_PAGE_SOURCES:
+                target = root / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(
+                    "<main>Not found</main>" if relative == "404.html" else "<main>Safe</main>",
+                    encoding="utf-8",
+                )
+            for relative in (
+                "SALAM-CENTER-APPROVED-FACTS.md",
+                "MIGRATION-SOURCE.md",
+                "docs/COMMERCIAL-AND-ENROLMENT.md",
+            ):
+                (root / relative).write_text("documentation", encoding="utf-8")
+            for relative in (
+                "robots.txt",
+                "sitemap.xml",
+                "assets/css/styles.css",
+                "assets/js/main.js",
+                "assets/js/trial-form.js",
+                "assets/logo/salaam-center-favicon.svg",
+            ):
+                (root / relative).write_text("", encoding="utf-8")
+            (root / "config/launch-readiness.json").write_text(
+                '{"site_mode":"prelaunch"}',
+                encoding="utf-8",
+            )
+
+            report = scan_repository(root, PUBLIC_PAGE_SOURCES)
+            self.assertIn(
+                "unsafe deployment boundary",
+                {item.category for item in report.failures},
+            )
+
+            (root / "_redirects").write_text(
+                "\n".join(expected_redirect_rules()) + "\n",
+                encoding="utf-8",
+            )
+            for source_path, backing_path in public_backing_pairs():
+                target = root / backing_path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes((root / source_path).read_bytes())
+            report = scan_repository(root, PUBLIC_PAGE_SOURCES)
+            self.assertNotIn(
+                "unsafe deployment boundary",
+                {item.category for item in report.failures},
+            )
+
     def test_production_mode_rejects_placeholder_public_copy_only(self):
         with TemporaryDirectory() as directory:
             root = Path(directory)

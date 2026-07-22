@@ -5,14 +5,14 @@ This document is the concise source of truth for the Salaam Center English pre-l
 ## 1. Approved brand facts
 
 - Brand name: **Salaam Center**
-- Intended domain: `https://salaam.center`
+- Production origin: `https://salaam.center`
 - Market category: online Afghan heritage education platform
 - Launch language: English
 - Future language phase: Dari/Persian with proper RTL support, not part of this launch
 - Main message: **Help your child stay connected to their language, faith, and Afghan heritage.**
 - Core belief: children should not have to lose their heritage simply because they grow up outside Afghanistan.
 
-The intended domain is not connected during the pre-launch foundation. `salaamcenter.org` is not an approved domain.
+The production origin is `https://salaam.center`; `https://www.salaam.center` is also an active production domain. Cloudflare Pages project `salaam-center`, deployed automatically from GitHub `main`, is the production hosting source of truth. `salaamcenter.org` is not an approved domain.
 
 ## 2. Approved positioning
 
@@ -199,11 +199,11 @@ The pricing page may exist in the noindex pre-launch website, but none of the fo
 - **Legal-entity information** — unresolved
 - **Final Terms and Conditions** — unresolved and not approved for public contractual use
 - **Final Privacy Policy** — unresolved and not approved as a final legal policy
-- **Contact mailbox** — `hello@salaam.center` is approved as the single planned public address, but inbound and outbound verification remain unresolved
-- **Live form and backend** — Formspree is approved only as planned architecture; no account, endpoint or submission path may be activated until separately approved and verified
+- **Initial contact channel** — WhatsApp is approved and active; the remaining operational check is a manual live-link, receive-and-reply test on mobile and WhatsApp Web/desktop
+- **Website handoff** — the client-side message preparation is active and intentionally has no form backend, database or automatic messaging
 - **Analytics** — initial launch is approved with no analytics; any future analytics proposal requires separate approval and privacy review
 - **Production SEO** — production-origin metadata and an unsubmitted sitemap are prepared; all pages remain noindex and crawling remains blocked
-- **Deployment approval** — unresolved; no publishing, Pages, domain or DNS action is authorized
+- **Deployment** — Cloudflare Pages already publishes from `main`; production indexing, legal approval and the final manual WhatsApp live-link test remain separate readiness blockers
 
 Teacher-compensation review is resolved for current pre-launch pricing. Production approval still requires review of payment-provider fees, tax and accounting treatment, administrative cost, marketing and acquisition cost, refund and chargeback exposure, consumer law and the final minimum net-margin policy.
 
@@ -261,16 +261,16 @@ The following remain unresolved and not approved for public claims:
 - Final curriculum stages, homework and materials
 - Formal assessment process, if any
 - Delivery tooling for progress summaries, supplementary resources and eligible completion recognition
-- Activation and verification of the planned Formspree trial-booking integration
+- Final manual verification of the approved WhatsApp Business profile, click-to-chat link, message receiving and replies
 - Secure payment provider and operational payment workflow (the approved sequence is documented above)
 - Any separately approved future analytics architecture and privacy treatment
 - Production indexing activation, including noindex removal and production robots rules
 
-## 12. Planned contact details
+## 12. Approved initial contact details
 
-`hello@salaam.center` is the single approved planned public mailbox for general questions, trial enquiries, privacy questions and enrolment communication. Public copy may display it while making clear that operational send-and-receive verification remains pending. Production preflight must remain blocked until `contact_email_verified` is true.
+WhatsApp is the only initial public contact channel. The exact approved WhatsApp Business number is `34614401172` (display format `+34 614 401 172`) and the only approved generic click-to-chat destination is `https://wa.me/34614401172`. Domain email is not required and no public email address or `mailto:` link is approved for initial launch. The WhatsApp number is a messaging route, not approval for a telephone-call link.
 
-No phone number, WhatsApp account, social account or physical address is approved for public use at initial launch.
+For a minor, the parent or guardian must be the contact. Children must not be invited to contact a teacher privately. No public physical address or social account is approved until separately reviewed.
 
 ## 13. Unresolved legal details
 
@@ -300,7 +300,13 @@ Protected teacher profiles and approved teacher/student media are not contaminat
 
 ## 15. Deployment restrictions
 
-The pre-launch foundation is not approval to deploy, publish, enable GitHub Pages, add a CNAME, connect the domain, configure Search Console, activate analytics, activate forms, take bookings or take payments. No deployment workflow or production configuration may be introduced without explicit approval.
+Cloudflare Pages is the production hosting source of truth. The Cloudflare Pages project is `salaam-center`, its build output is the repository root, and automatic deployment from GitHub `main` is enabled. The production domains `salaam.center` and `www.salaam.center` and HTTPS are active in Cloudflare.
+
+Because the build output remains the repository root, the committed `_redirects` file is a fail-closed static public-route allowlist. Exact reviewed public URLs proxy to distinct, committed `site-runtime/` backing artifacts; a byte-for-byte synchronization check prevents source/backing drift. Every other path, including case-changed, encoded, repository-only and future unknown paths, proxies to a guaranteed-missing sentinel so Cloudflare Pages renders the root `404.html` template with HTTP 404 without serving the requested file. Preflight inventories the deployable tree, rejects unclassified files and verifies the complete route and mirror contract before a push. Cloudflare Pages Functions, `_worker.js` and a form backend remain absent.
+
+The remote `Create CNAME` commit `721337d6c53f289b6ca512a8d89439dfc1cacbc9` was inspected and reconciled as a direct, CNAME-only fast-forward whose file contained exactly `salaam.center`. The unnecessary repository-root `CNAME` was then removed through a normal forward change because custom domains are configured in Cloudflare. A GitHub Pages CNAME file is not required. GitHub Pages must not be configured, no replacement CNAME should be added, and DNS must not be changed through this repository. No Cloudflare or DNS setting was changed by the migration.
+
+Deployment does not approve production indexing, Search Console, analytics, payments or final legal wording. Those decisions remain governed by the configuration and launch checklist.
 
 ## 16. Pre-launch noindex rule
 
@@ -310,31 +316,35 @@ Every public HTML page must contain `noindex, nofollow`. Production-origin canon
 
 ### Approved public facts
 
-- The only intended production origin is `https://salaam.center`.
-- The single planned public mailbox is `hello@salaam.center` for general questions, trial enquiries, privacy questions and enrolment communication. It is not operationally verified while `contact_email_verified` is false.
+- The production origin is `https://salaam.center`, with `https://www.salaam.center` as the second active production domain.
+- WhatsApp is the only initial public contact channel. The exact digits-only approved number is `34614401172` and the generic destination is `https://wa.me/34614401172`.
+- Domain email is not required. Public email, `mailto:`, telephone-call links and Formspree are not part of the initial architecture.
 - A parent or guardian remains the primary contact for every learner under 18. Children are not invited to contact teachers directly.
-- No public WhatsApp number, telephone number, physical address or social account is approved for initial launch.
-- Initial launch uses no analytics and no advertising pixels. It therefore does not require an analytics-consent banner.
-- The user-activated video player remains privacy-enhanced. Essential browser storage may be used only for short-lived form-success state and interface behavior.
-- Analytics requires a separate future approval and privacy review.
+- Initial launch uses no analytics, advertising pixels or payment integration. No payments are active. It therefore does not require an analytics-consent banner.
+- The user-activated video player remains privacy-enhanced and uses `youtube-nocookie.com`.
 
-### Approved planned architecture and inactive integration
+### Approved client-side WhatsApp handoff
 
-- `config/launch-readiness.json` is the repository-side launch state of record and remains in `prelaunch` mode during this phase.
-- Formspree is the planned form provider. No account, form ID or endpoint is active or verified in this batch.
-- The unchecked required privacy acknowledgement is separate from marketing consent; no marketing consent is collected.
-- Planned form data is limited to: adult contact role, adult contact name, adult contact email, country, time zone or nearest city, learner first name, learner age group, selected program, preferred frequency, preferred availability, optional current learning level and goals, privacy acknowledgement record, the `_gotcha` honeypot, and provider-supplied technical submission metadata after activation.
-- An Adult woman learner must select the Adult woman group. A Parent or guardian must select a child age group; any mismatch receives an explanation rather than silent correction.
-- The planned programs are Quran, Dari/Persian, and Afghan Culture & Islamic Ethics. Culture & Islamic Ethics follows cohort availability and does not use private-plan prices.
+- `config/launch-readiness.json` is the repository-side launch state of record and remains in `prelaunch` mode until the genuine legal, indexing and manual live-link blockers are resolved.
+- Formspree is superseded and inactive. There is no form provider, backend endpoint, database, public checkout or WhatsApp Business Platform API. No WhatsApp API credentials or tokens are used.
+- The website validates the approved fields and prepares a plain-text WhatsApp message locally in the adult visitor's browser. It does not submit or store that information on a Salaam Center server, use `fetch` or `XMLHttpRequest`, or place the information in the current website URL.
+- The handoff also prohibits `sendBeacon`, tracking-pixel image assignments and other browser network-submission paths. The Free Trial document uses a no-referrer policy, and new-window access to the opener is severed while retaining a blocked-popup fallback.
+- Opening WhatsApp is a deliberate visitor action. The visitor must review the prepared message and press Send inside WhatsApp; the website does not send automatically and cannot know whether Send was pressed.
+- The approved handoff uses the standard `https://wa.me/34614401172?text=ENCODED_MESSAGE` structure with `encodeURIComponent(message)`, no tracking parameters, URL shortener or third-party wrapper.
+- A WhatsApp message is only an enquiry. It does not confirm a teacher, schedule, trial or booking and creates no payment obligation.
+- The collected values are limited to adult contact role, adult contact name, country or time zone, learner age group, program, preferred frequency, preferred schedule and an optional learning goal. The learner's name is not collected.
+- An adult woman learner must select the Adult woman group. A parent or guardian must select a child age group; any mismatch receives an accessible explanation rather than silent correction.
+- The approved programs are Quran, Dari/Persian, and Afghan Culture & Islamic Ethics. Culture & Islamic Ethics follows cohort availability and does not use private-plan prices.
+- The Privacy page must disclose the local preparation and deliberate WhatsApp transfer, WhatsApp's separate third-party role, the need to review before sending, and the prohibition on sensitive information.
 
 ### Forbidden form data
 
-The trial form must not collect a child email or phone number, passport or identity document, exact date of birth, medical information or diagnoses, school name, home address, payment details, files, social-media handles, religious-confession declarations, marketing consent, WhatsApp number, financial information, government identifiers or passwords.
+The trial form must not collect any email address, learner name or surname, child phone number, passport or identity document, exact date of birth, medical information or diagnoses, school name, home address, payment details, files, social-media handles, religious-confession declarations, marketing consent, WhatsApp number, financial information, government identifiers or passwords. It must not include a honeypot, provider metadata or a provider privacy checkbox.
 
 ### Production readiness flags and blockers
 
-- All external activation and verification flags remain false until independently confirmed.
-- Legal blockers: controller/operator name, suitable disclosure address, final legal bases, retention rules, provider/transfer disclosures, rights and complaint process, consumer withdrawal and refund treatment, taxes, applicable law, dispute process, effective date, and final Privacy and Terms approvals.
-- Form blockers: verified form-ID endpoint, verified notification destination, `salaam.center` domain restriction, spam protection, dummy success/error/network/duplicate tests, and success-marker verification.
-- Domain blockers: GitHub domain ownership verification, correct Pages repository/source, custom-domain configuration, current official DNS records, deliberate apex/www behavior, DNS propagation, HTTPS and redirect verification.
-- No deployment, GitHub Pages activation, CNAME, DNS change, domain connection, Formspree activation, analytics, payment integration or Search Console activation is authorized in this batch.
+- Legal blockers: approved controller/operator identity, suitable disclosure address, final legal bases and retention rules, rights and complaint process, consumer withdrawal and refund treatment, taxes, applicable law, dispute process, effective date, and final Privacy and Terms approvals.
+- Indexing blockers: removal of `noindex, nofollow`, production `robots.txt` state and final placeholder-copy review.
+- Operational blocker: a final manual test of the approved WhatsApp Business profile and live click-to-chat link on Android or iPhone and WhatsApp Web/desktop, including message receiving and replies. `whatsapp_live_link_tested` remains false until this succeeds without sending test data from automated checks.
+- GitHub Pages, a repository CNAME, Formspree, domain email, analytics and payment integration are not blockers because they are deliberately outside the approved architecture.
+- DNS and Cloudflare settings must not be changed through this repository migration.

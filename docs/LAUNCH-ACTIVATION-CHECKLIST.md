@@ -1,93 +1,79 @@
 # Salaam Center Launch Activation Checklist
 
-Use the dependency order below; the lettered sections are reference groups, not one linear pass. Do not place passwords, API keys, tokens, private DNS credentials or real child data in the repository.
+This checklist records the approved Cloudflare Pages and WhatsApp handoff architecture. Do not place passwords, API keys, tokens, private DNS credentials or real child data in the repository.
 
-1. Complete A, B, the preparation items in C, and D.
-2. With separate deployment approval, complete **Stage 1** in E, then F. Keep the public form disabled and the site blocked from indexing. Production preflight must still report `EXPECTED BLOCKED PRODUCTION STATE` during this controlled infrastructure transition.
-3. From the working production origin, complete the verification items in C with non-sensitive dummy data.
-4. Complete **Stage 2** in E, then G. Production preflight must exit 0 before the final production-switch commit and normal push.
+## A. Locked architecture
 
-## A. Email
+- [x] Cloudflare Pages is the production hosting source of truth: project `salaam-center`, empty build command, repository-root output and automatic deployment from GitHub `main`.
+- [x] Root `_redirects` is the exact fail-closed static public-route allowlist. Reviewed URLs proxy only to byte-identical committed `site-runtime/` backing artifacts; every other path resolves through the missing sentinel to the styled HTTP 404. No Pages Function, `_worker.js` or form backend is introduced, and every future file must still be classified before push.
+- [x] Production domains are `https://salaam.center` and `https://www.salaam.center`; HTTPS is active.
+- [x] The remote `Create CNAME` commit `721337d6c53f289b6ca512a8d89439dfc1cacbc9` was inspected as a direct CNAME-only fast-forward whose file contained exactly `salaam.center`, then reconciled.
+- [x] The unnecessary repository-root `CNAME` was removed through a normal forward change. Cloudflare holds the custom-domain configuration, so no replacement CNAME is required.
+- [x] GitHub Pages must not be configured. DNS must not be changed through this repository. Do not change Cloudflare settings as part of an application release.
+- [x] WhatsApp is the only initial public contact channel. The approved digits-only WhatsApp Business number is `34614401172`, displayed as `+34 614 401 172` and linked only through `https://wa.me/34614401172`.
+- [x] Formspree is superseded and inactive. Domain email is not required; no public email address or `mailto:` link is part of initial launch.
+- [x] The website prepares the message locally in the adult visitor's browser. It has no form backend or database, performs no website submission or personal-data storage, and does not automatically send a WhatsApp message.
+- [x] The visitor must review the prepared message and press Send inside WhatsApp. A WhatsApp message is an enquiry, not a confirmed booking or payment obligation.
+- [x] No WhatsApp Business Platform API, credential, token, analytics, advertising pixel, payment integration or public checkout is active.
+- [x] A parent or guardian is the required contact for every minor. Children are not invited to contact teachers privately.
 
-- [ ] Create `hello@salaam.center` with the chosen email provider.
-- [ ] Verify inbound mail and outbound mail.
-- [ ] Verify SPF, DKIM where supported, and DMARC where supported.
-- [ ] Send a test from an unrelated address and reply successfully.
-- [ ] Set `contact_email_verified` to `true` only after every check above succeeds.
+## B. Manual WhatsApp verification
 
-## B. Legal information
+Complete these checks with dummy adult data only. Automated tests and visual QA must not send a real WhatsApp message. A separately authorised human tester may send one non-sensitive dummy message when verifying receiving and replies.
 
-- [ ] Obtain and publish the legal controller/operator name and a business or correspondence address suitable for legal disclosure; insert the approved values into the final notices and `legal_controller_name` / `legal_controller_address` configuration fields.
-- [ ] Complete the privacy legal bases, retention rules, Formspree/provider and international-transfer disclosures where applicable, data-rights process, complaint route and operational contact process.
-- [ ] Complete the consumer cancellation/withdrawal and refund review, taxes, applicable law and dispute process.
-- [ ] Insert a final effective date.
-- [ ] Set `privacy_policy_final_approved` and `terms_final_approved` to `true` only after actual legal review.
+- [ ] Confirm the WhatsApp Business profile shows the intended Salaam Center name, profile image and exact number.
+- [ ] On Android or iPhone, open the generic contact link and the Free Trial `Continue in WhatsApp` handoff.
+- [ ] On WhatsApp Web/desktop, repeat both link checks and confirm the correct conversation opens.
+- [ ] Check the experience when WhatsApp is not installed; confirm the platform's normal click-to-chat guidance appears and the Salaam Center site makes no false success claim.
+- [ ] Confirm the prepared message is readable, has the approved line breaks and labels, uses trimmed values, and shows `Not provided` when the optional goal is empty.
+- [ ] Confirm the destination is exactly `34614401172`, with no tracking parameter, shortened URL, API wrapper or unexpected recipient.
+- [ ] Review the prepared message before sending and confirm it contains no hidden metadata, learner name, sensitive data, medical details, identity numbers, financial details or passwords.
+- [ ] Exercise the parent or guardian flow for a child age group and the Adult woman learner flow; confirm invalid role/age combinations are rejected accessibly.
+- [ ] Confirm popup-blocked behavior uses the current-tab fallback and rapid duplicate activation does not open repeated conversations.
+- [ ] Confirm validation identifies the field errors, moves focus to the error summary and restores the CTA after an opening failure.
+- [ ] Confirm no automatic sending occurs: WhatsApp opens with an editable draft and the tester must deliberately press Send.
+- [ ] When the separately authorised receive-and-reply test is performed, confirm Salaam Center receives the dummy message and can reply successfully on the approved business account.
+- [ ] Confirm the generic non-JavaScript link contains no prepared form values.
+- [ ] Open `/success/` directly and confirm it says the website cannot know whether Send was pressed and that no trial is booked until teacher and schedule are confirmed.
+- [ ] Set `whatsapp_live_link_tested` to `true` only after all applicable mobile, WhatsApp Web/desktop, receiving and reply checks succeed.
 
-## C. Formspree
+## C. Privacy, terms and safeguarding
 
-Preparation before infrastructure activation:
+- [x] Privacy wording explains browser-local preparation, deliberate transfer to WhatsApp, WhatsApp's third-party role, review before sending and the prohibition on sensitive information.
+- [x] Privacy wording states that the Salaam Center website does not submit or store form values and that no analytics or advertising pixels are active.
+- [x] Terms state that a WhatsApp enquiry is not a booking, creates no payment obligation and becomes a trial only after teacher and schedule confirmation.
+- [x] Contact, Free Trial and message copy keep the parent or guardian as the contact for a minor.
+- [ ] Obtain the approved legal controller/operator identity and a suitable disclosure address.
+- [ ] Complete legal bases, retention, third-party/transfer disclosures, rights, complaints, consumer withdrawal, refunds, taxes, applicable law, dispute process and effective date.
+- [ ] Set `privacy_policy_final_approved` and `terms_final_approved` to `true` only after real legal review.
 
-- [ ] Create a dedicated Salaam Center project and form.
-- [ ] Use an HTTPS form-ID endpoint (`https://formspree.io/f/<real-form-id>`), never an email-address URL.
-- [ ] Connect and verify the notification destination.
-- [ ] Set Restrict to Domain to `salaam.center`.
-- [ ] Confirm spam protection and retain the `_gotcha` honeypot.
+## D. Production indexing switch
 
-Verification after Stage 1 in E and all of F are complete:
+The live Cloudflare deployment may remain deliberately noindex while the legal and operational checks are incomplete. In the final approved production-indexing change:
 
-- [ ] From `https://salaam.center`, use a controlled developer test with non-sensitive dummy data to confirm the domain restriction and notification delivery while the public form remains disabled.
-- [ ] Insert the endpoint into `config/launch-readiness.json` and the trial page activation data only after verification.
-- [ ] Test with non-sensitive dummy data: successful submission, provider validation error, network failure and duplicate-click prevention.
-- [ ] Confirm the Success page appears only after a real confirmed response and direct access remains truthful.
-- [ ] Do not use real child data and do not load-test the provider endpoint.
-- [ ] Set `booking_endpoint_verified` and `formspree_domain_restriction_confirmed` to `true` only after all tests succeed.
+- [ ] Change `site_mode` to `production` only when every genuine blocker is resolved.
+- [ ] Remove noindex and `nofollow` from every public HTML page.
+- [ ] Change `robots.txt` from `Disallow: /` to the approved production crawl policy.
+- [ ] Confirm `sitemap.xml` contains the approved canonical routes and continues to exclude `/success/` and `/404.html`.
+- [ ] Remove remaining pre-launch, placeholder and pending wording only when approved facts replace it.
+- [ ] Run `python scripts/launch_preflight.py --mode production`; it must exit 0 before treating the site as production-ready for indexing.
+- [ ] Keep analytics, advertising pixels, payments, Search Console, GitHub Pages and repository CNAME absent unless each receives separate future approval.
 
-## D. GitHub domain security
+## E. Release verification
 
-- [ ] Verify ownership of `salaam.center` in GitHub before custom-domain activation; do not change DNS first.
-- [ ] Confirm this repository is the intended GitHub Pages repository.
-- [ ] Confirm no other Pages site can claim the domain and no takeover risk remains.
-- [ ] Set `domain_verified_with_github` to `true` only after the ownership check succeeds.
+- [ ] After any reviewed HTML, CSS, JavaScript, favicon, robots or sitemap source change, run `python -B scripts/sync_public_runtime.py --write` to refresh the committed backing artifacts.
+- [ ] Run the focused WhatsApp, launch-readiness, trust-evidence, pricing, economics, accessibility, protected-media and shared-layout tests.
+- [ ] Run full Python unittest discovery and every JavaScript test; run JavaScript syntax checks, `python -B scripts/sync_public_runtime.py --check` and `git diff --check`.
+- [ ] Confirm public trust failures, broken internal links, public email, `mailto:`, Formspree, active network submission, personal-data storage, analytics, payments, internal teacher-cost leakage and secret findings are all zero.
+- [ ] Confirm all 16 shared-layout source pages and all 21 public runtime backing artifacts remain synchronized, and all protected teacher identities, teacher videos, student videos and approved public prices remain unchanged.
+- [ ] Confirm known internal-document, config, script, test, partial and unused-source-asset URLs return the styled HTTP 404 and never return the requested file contents on the apex, `www` and `pages.dev` domains. Include case-changed, encoded-slash, double-slash and query-string variants.
+- [ ] Confirm prelaunch preflight exits 0. Until section C and D approvals and the final manual live-link test are complete, production preflight must report only those genuine blockers.
 
-## E. Production-mode repository changes
+## F. Push and Cloudflare observation
 
-### Stage 1 — separately approved infrastructure while the site stays prelaunch
-
-- [ ] Keep `site_mode` as `prelaunch`, retain `noindex, nofollow`, retain block-all `robots.txt`, and keep the trial form disabled.
-- [ ] Add `CNAME` containing only `salaam.center`.
-- [ ] Configure the approved GitHub Pages publishing source or an approved deployment workflow.
-- [ ] Review, commit and normally push this infrastructure-only transition under separate authorization.
-- [ ] Confirm production preflight still exits nonzero with `EXPECTED BLOCKED PRODUCTION STATE`; do not weaken it or treat this stage as production approval.
-- [ ] Complete F, then return to the verification items in C.
-
-### Stage 2 — final repository switch after A, B, C, D and F are verified
-
-- [ ] Change `site_mode` to `production` and update only genuinely verified flags.
-- [ ] Remove `noindex, nofollow` from all production pages.
-- [ ] Change `robots.txt` from block-all to reviewed production crawl rules and add `Sitemap: https://salaam.center/sitemap.xml`.
-- [ ] Reconfirm every canonical and Open Graph URL uses the exact approved route on `https://salaam.center`.
-- [ ] Replace every prelaunch, pending, inactive and placeholder statement with approved production copy. Review the Contact page and footer, trial status and privacy acknowledgement, Privacy and Terms pages, direct Success state, 404 page and policy-link labels explicitly.
-- [ ] Activate the verified endpoint in the trial page and remove native disabled controls only after privacy and provider approval; retain the truthful direct-Success state and confirmed-response marker protection.
-- [ ] Update mode-specific scanner and regression expectations so they permit only the known production trial form with the exact verified Formspree form-ID endpoint and only the exact approved controller/operator name and disclosure address from configuration, while continuing to reject every other active form, placeholder endpoint, unsafe field, legal identity and postal address.
-- [ ] Keep `analytics_mode` set to `none`; add no analytics, advertising pixel, optional-cookie control or conversion event.
-- [ ] Run `python scripts/launch_preflight.py --mode production`; it must exit 0.
-- [ ] Review, commit and push the production activation as a separately approved change.
-
-## F. DNS and Pages
-
-- [ ] Configure the custom domain in GitHub Pages before changing DNS.
-- [ ] At activation time, check current official GitHub documentation and apply its current recommended DNS records; do not rely on copied historical IP values.
-- [ ] Configure apex and `www` behavior deliberately.
-- [ ] Wait for DNS propagation, then enable HTTPS only after GitHub makes it available.
-- [ ] Verify HTTP/HTTPS and apex/`www` behavior, redirects and absence of mixed content.
-- [ ] Reconfirm no domain takeover risk.
-- [ ] Record `github_pages_enabled`, `dns_configured` and `https_confirmed` as `true` in the Stage 2 configuration only after each corresponding external check has actually succeeded.
-
-## G. Final production tests
-
-- [ ] Test form submission, email delivery, validation and network error states, duplicate clicks and protected success routing.
-- [ ] Test mobile navigation, keyboard access, visible focus, the disabled/active form transition, and representative teacher and student videos.
-- [ ] Test all internal links, the custom 404, sitemap, robots, canonicals and structured data.
-- [ ] Test HTTPS, apex/`www` redirects, mixed content and removal of every `noindex` directive.
-- [ ] Run the production preflight, full Python and JavaScript suites, public-source/trust scan, integration scan, internal-cost leakage scan and secrets scan.
-- [ ] After the normal push, repeat the live form/email, HTTPS, redirect, mixed-content, robots, sitemap, canonical, 404 and noindex-removal smoke tests on the production origin.
+- [ ] Fetch before pushing and confirm `origin/main` has not advanced, the local branch is ahead but not behind, and the remote is `Salik-Fazely/Salaam-Center`.
+- [ ] Push normally to `main`; never force-push or rewrite the reconciled `Create CNAME` history.
+- [ ] After the push, fetch and confirm local HEAD equals `origin/main`, ahead/behind is `0/0`, the working tree is clean, `CNAME` is absent and no GitHub Pages workflow exists.
+- [ ] Observe the automatic Cloudflare Pages deployment without changing Cloudflare or DNS settings.
+- [ ] Check the apex, `www`, Free Trial, Contact, Privacy and Terms URLs for the exact WhatsApp destination, no public email, no Formspree, no analytics, no false confirmation, intact styling and intact protected media.
+- [ ] Check the deployment boundary on the apex, `www` and `pages.dev`: reviewed paths load, while internal documentation, config, partials, scripts, tests, unused assets and direct `site-runtime/` paths return the styled HTTP 404 without exposing their bytes.
