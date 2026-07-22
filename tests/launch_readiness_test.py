@@ -25,6 +25,8 @@ PUBLIC_PAGES = (
     "book-trial/index.html", "contact/index.html", "privacy-policy/index.html",
     "terms/index.html", "success/index.html", "404.html",
 )
+NOINDEX_PAGES = ("success/index.html", "404.html")
+INDEXABLE_PAGES = tuple(page for page in PUBLIC_PAGES if page not in NOINDEX_PAGES)
 ROUTES = {
     "index.html": "/", "404.html": "/404.html",
     **{path: f"/{path.removesuffix('index.html')}" for path in PUBLIC_PAGES
@@ -67,9 +69,9 @@ def parse_head(relative):
 
 
 class LaunchConfigurationTests(unittest.TestCase):
-    def test_prelaunch_configuration_is_strict_cloudflare_whatsapp_only(self):
+    def test_production_configuration_is_exact_and_cloudflare_whatsapp_only(self):
         data = json.loads(CONFIG.read_text(encoding="utf-8"))
-        self.assertEqual("prelaunch", data["site_mode"])
+        self.assertEqual("production", data["site_mode"])
         self.assertEqual("https://salaam.center", data["production_origin"])
         self.assertEqual(["salaam.center", "www.salaam.center"], data["production_domains"])
         self.assertEqual("cloudflare_pages", data["hosting_source"])
@@ -84,13 +86,16 @@ class LaunchConfigurationTests(unittest.TestCase):
         self.assertRegex(data["whatsapp_number"], r"^[1-9]\d{7,14}$")
         self.assertIs(data["whatsapp_number_verified"], True)
         self.assertIs(data["whatsapp_link_verified"], True)
-        self.assertIs(data["whatsapp_live_link_tested"], False)
+        self.assertIs(data["whatsapp_live_link_tested"], True)
         self.assertEqual("client_side_whatsapp_handoff", data["form_submission_mode"])
         self.assertEqual("none", data["booking_provider"])
         self.assertEqual("", data["booking_endpoint"])
+        self.assertEqual("Salaam Center", data["legal_controller_name"])
+        self.assertEqual("Sabadell, Barcelona", data["legal_controller_address"])
+        self.assertIs(data["privacy_policy_final_approved"], True)
+        self.assertIs(data["terms_final_approved"], True)
         self.assertEqual("none", data["analytics_mode"])
-        for key in ("privacy_policy_final_approved", "terms_final_approved",
-                    "github_pages_enabled", "cname_required", "search_console_enabled"):
+        for key in ("github_pages_enabled", "cname_required", "search_console_enabled"):
             self.assertIs(data[key], False, key)
         for obsolete in (
             "contact_email", "contact_email_verified", "booking_endpoint_verified",
@@ -111,38 +116,31 @@ class PreflightTests(unittest.TestCase):
             command += ["--config", str(config)]
         return subprocess.run(command, cwd=ROOT, text=True, capture_output=True)
 
-    def test_prelaunch_passes_without_modifying_repository(self):
+    def test_both_supported_modes_pass_without_modifying_repository(self):
         before = {p: p.stat().st_mtime_ns for p in ROOT.rglob("*") if p.is_file()}
-        result = self.run_preflight("prelaunch")
+        prelaunch_result = self.run_preflight("prelaunch")
+        production_result = self.run_preflight("production")
         after = {p: p.stat().st_mtime_ns for p in ROOT.rglob("*") if p.is_file()}
-        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
-        self.assertIn("PASS: prelaunch readiness", result.stdout)
+        self.assertEqual(
+            0,
+            prelaunch_result.returncode,
+            prelaunch_result.stdout + prelaunch_result.stderr,
+        )
+        self.assertEqual(
+            0,
+            production_result.returncode,
+            production_result.stdout + production_result.stderr,
+        )
+        self.assertIn(
+            "PASS: prelaunch/backward-compatible readiness",
+            prelaunch_result.stdout,
+        )
+        self.assertIn("PASS: production readiness", production_result.stdout)
         self.assertIn(
             "PASS: unreviewed repository paths fail closed with styled HTTP 404",
-            result.stdout,
+            production_result.stdout,
         )
         self.assertEqual(before, after)
-
-    def test_production_reports_expected_external_and_legal_blockers(self):
-        result = self.run_preflight("production")
-        self.assertNotEqual(0, result.returncode)
-        self.assertIn("EXPECTED BLOCKED PRODUCTION STATE", result.stdout)
-        failures = {
-            line.removeprefix("FAIL: ")
-            for line in result.stdout.splitlines()
-            if line.startswith("FAIL: ")
-        }
-        self.assertEqual({
-            "site_mode is production",
-            "legal_controller_name is present",
-            "legal_controller_address is present",
-            "privacy_policy_final_approved is true",
-            "terms_final_approved is true",
-            "whatsapp_live_link_tested is true",
-            "noindex, nofollow removed from production pages",
-            "robots.txt allows intended crawling",
-            "no placeholder strings remain",
-        }, failures)
 
     def test_invalid_json_and_unknown_mode_fail_safely(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -166,11 +164,11 @@ class PreflightTests(unittest.TestCase):
             with self.subTest(number=number), tempfile.TemporaryDirectory() as directory:
                 config = Path(directory) / "config.json"
                 config.write_text(json.dumps({**base, "whatsapp_number": number}), encoding="utf-8")
-                result = self.run_preflight("prelaunch", config)
+                result = self.run_preflight("production", config)
                 self.assertNotEqual(0, result.returncode)
                 self.assertIn("whatsapp_number", result.stdout)
 
-    def test_prelaunch_rejects_architecture_mismatches(self):
+    def test_production_rejects_architecture_and_approval_mismatches(self):
         base = json.loads(CONFIG.read_text(encoding="utf-8"))
         cases = (
             ({"whatsapp_number_verified": False}, "whatsapp_number_verified is true"),
@@ -185,12 +183,19 @@ class PreflightTests(unittest.TestCase):
             ({"booking_provider": "formspree"}, "booking_provider is none"),
             ({"booking_endpoint": "https://example.test/form"}, "booking_endpoint is empty"),
             ({"analytics_mode": "active"}, "analytics_mode remains none"),
+            ({"legal_controller_name": "Another operator"}, "legal_controller_name is exact"),
+            ({"legal_controller_name": ""}, "legal_controller_name is exact"),
+            ({"legal_controller_address": "Another address"}, "legal_controller_address is exact"),
+            ({"legal_controller_address": ""}, "legal_controller_address is exact"),
+            ({"privacy_policy_final_approved": False}, "privacy_policy_final_approved is true"),
+            ({"terms_final_approved": False}, "terms_final_approved is true"),
+            ({"whatsapp_live_link_tested": False}, "whatsapp_live_link_tested is true"),
         )
         for patch, expected in cases:
             with self.subTest(patch=patch), tempfile.TemporaryDirectory() as directory:
                 config = Path(directory) / "config.json"
                 config.write_text(json.dumps({**base, **patch}), encoding="utf-8")
-                result = self.run_preflight("prelaunch", config)
+                result = self.run_preflight("production", config)
                 self.assertNotEqual(0, result.returncode)
                 self.assertIn(expected, result.stdout)
 
@@ -201,8 +206,8 @@ class PreflightTests(unittest.TestCase):
         config = json.loads(CONFIG.read_text(encoding="utf-8"))
         config.update({
             "site_mode": "production",
-            "legal_controller_name": "Approved Operator",
-            "legal_controller_address": "Approved disclosure address",
+            "legal_controller_name": "Salaam Center",
+            "legal_controller_address": "Sabadell, Barcelona",
             "privacy_policy_final_approved": True,
             "terms_final_approved": True,
             "whatsapp_live_link_tested": True,
@@ -219,6 +224,8 @@ class PreflightTests(unittest.TestCase):
             for page in PUBLIC_PAGES
         }
         source = dict(bases)
+        for page in NOINDEX_PAGES:
+            source[page] += '<meta name="robots" content="noindex, nofollow">'
         source["teachers/index.html"] += " ".join(module.PROTECTED_NAMES + module.PROTECTED_VIDEO_IDS)
         source["pricing/index.html"] += " ".join(module.APPROVED_PRICES)
         source["book-trial/index.html"] = (
@@ -228,6 +235,7 @@ class PreflightTests(unittest.TestCase):
         )
         truthful_success = (
             bases["success/index.html"]
+            + '<meta name="robots" content="noindex, nofollow">'
             + "<h1>Continue your conversation in WhatsApp</h1>"
             + "<p>The website cannot confirm whether you pressed Send.</p>"
             + "<p>The trial is not booked until Salaam Center confirms teacher and schedule availability.</p>"
@@ -272,6 +280,15 @@ class PreflightTests(unittest.TestCase):
                 target = root / backing_path
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_bytes((root / source_path).read_bytes())
+
+            def sync_runtime_artifact(relative):
+                backing = next(
+                    backing_path
+                    for source_path, backing_path in public_backing_pairs()
+                    if source_path == relative
+                )
+                (root / backing).write_bytes((root / relative).read_bytes())
+
             module.ROOT = root
             result = module.Result()
             output = io.StringIO()
@@ -279,6 +296,56 @@ class PreflightTests(unittest.TestCase):
                 module.production(config, source, result)
             self.assertEqual([], result.failures, output.getvalue())
             self.assertIn("PASS: production readiness", output.getvalue())
+
+            source["index.html"] += '<meta name="robots" content="noindex, nofollow">'
+            reintroduced_noindex = module.Result()
+            with contextlib.redirect_stdout(io.StringIO()):
+                module.production(config, source, reintroduced_noindex)
+            self.assertIn(
+                "intended indexable pages have no noindex directive",
+                reintroduced_noindex.failures,
+            )
+            source["index.html"] = bases["index.html"]
+
+            for page in NOINDEX_PAGES:
+                original = source[page]
+                source[page] = original.replace(
+                    '<meta name="robots" content="noindex, nofollow">',
+                    "",
+                )
+                missing_noindex = module.Result()
+                with contextlib.redirect_stdout(io.StringIO()):
+                    module.production(config, source, missing_noindex)
+                self.assertIn(
+                    "Success and 404 retain exact noindex, nofollow",
+                    missing_noindex.failures,
+                )
+                source[page] = original
+
+            source["index.html"] += (
+                '<link rel="canonical" href="https://salaam.center/">'
+            )
+            duplicate_canonical = module.Result()
+            with contextlib.redirect_stdout(io.StringIO()):
+                module.production(config, source, duplicate_canonical)
+            self.assertIn(
+                "canonical URLs point only to https://salaam.center",
+                duplicate_canonical.failures,
+            )
+            source["index.html"] = bases["index.html"]
+
+            source["index.html"] = source["index.html"].replace(
+                'href="https://salaam.center/"',
+                'href="https://www.salaam.center/"',
+            )
+            wrong_canonical = module.Result()
+            with contextlib.redirect_stdout(io.StringIO()):
+                module.production(config, source, wrong_canonical)
+            self.assertIn(
+                "canonical URLs point only to https://salaam.center",
+                wrong_canonical.failures,
+            )
+            source["index.html"] = bases["index.html"]
 
             redirects_path.unlink()
             missing_boundary = module.Result()
@@ -292,6 +359,21 @@ class PreflightTests(unittest.TestCase):
                 "\n".join(expected_redirect_rules()) + "\n",
                 encoding="utf-8",
             )
+
+            (root / "robots.txt").write_text(
+                "User-agent: *\nDisallow: /\n",
+                encoding="utf-8",
+            )
+            sync_runtime_artifact("robots.txt")
+            blocked_robots = module.Result()
+            with contextlib.redirect_stdout(io.StringIO()):
+                module.production(config, source, blocked_robots)
+            self.assertIn("robots.txt allows intended crawling", blocked_robots.failures)
+            (root / "robots.txt").write_text(
+                "User-agent: *\nAllow: /\n\nSitemap: https://salaam.center/sitemap.xml\n",
+                encoding="utf-8",
+            )
+            sync_runtime_artifact("robots.txt")
 
             source["success/index.html"] = bases["success/index.html"] + "<h1>Message Sent</h1>"
             false_success = module.Result()
@@ -307,6 +389,23 @@ class PreflightTests(unittest.TestCase):
             self.assertIn("no public email contact", public_email.failures)
 
             source["contact/index.html"] = bases["contact/index.html"]
+            source["contact/index.html"] += " Formspree"
+            public_formspree = module.Result()
+            with contextlib.redirect_stdout(io.StringIO()):
+                module.production(config, source, public_formspree)
+            self.assertIn("no active Formspree reference", public_formspree.failures)
+
+            source["contact/index.html"] = bases["contact/index.html"]
+            source["index.html"] += " Teacher rate: eight euros per completed class."
+            public_economics = module.Result()
+            with contextlib.redirect_stdout(io.StringIO()):
+                module.production(config, source, public_economics)
+            self.assertIn(
+                "no internal teacher-cost information is served by the website",
+                public_economics.failures,
+            )
+            source["index.html"] = bases["index.html"]
+
             for unsafe_network in (
                 "fetch('/submit');",
                 "navigator.sendBeacon('/collect', value);",
@@ -339,12 +438,35 @@ class PreflightTests(unittest.TestCase):
                 module.production(config, source, safe_video)
             self.assertNotIn("no browser network submission", safe_video.failures)
 
+            (root / "assets/js/main.js").write_text(
+                "fetch('/collect');",
+                encoding="utf-8",
+            )
+            unsafe_main = module.Result()
+            with contextlib.redirect_stdout(io.StringIO()):
+                module.production(config, source, unsafe_main)
+            self.assertIn("no browser network submission", unsafe_main.failures)
+            (root / "assets/js/main.js").write_text("", encoding="utf-8")
+
             script_path.write_text(handoff_script, encoding="utf-8")
             sitemap_path.write_text(f'<?xml version="1.0"?><urlset>{sitemap_entries}</urlset>', encoding="utf-8")
+            sync_runtime_artifact("sitemap.xml")
             invalid_sitemap = module.Result()
             with contextlib.redirect_stdout(io.StringIO()):
                 module.production(config, source, invalid_sitemap)
             self.assertIn("sitemap.xml is present and valid", invalid_sitemap.failures)
+
+            sitemap_path.write_text(
+                f'<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+                f'{sitemap_entries.replace("</loc></url>", "</loc><lastmod>2026-07-22</lastmod></url>", 1)}'
+                f'</urlset>',
+                encoding="utf-8",
+            )
+            sync_runtime_artifact("sitemap.xml")
+            fabricated_lastmod = module.Result()
+            with contextlib.redirect_stdout(io.StringIO()):
+                module.production(config, source, fabricated_lastmod)
+            self.assertIn("sitemap.xml is present and valid", fabricated_lastmod.failures)
 
 
 class MetadataAndSitemapTests(unittest.TestCase):
@@ -367,7 +489,10 @@ class MetadataAndSitemapTests(unittest.TestCase):
             self.assertEqual(parser.title.strip(), metas.get("twitter:title"), page)
             self.assertEqual(metas.get("description"), metas.get("og:description"), page)
             self.assertEqual(metas.get("description"), metas.get("twitter:description"), page)
-            self.assertEqual("noindex, nofollow", metas.get("robots"), page)
+            if page in NOINDEX_PAGES:
+                self.assertEqual("noindex, nofollow", metas.get("robots"), page)
+            else:
+                self.assertIsNone(metas.get("robots"), page)
         self.assertEqual(len(titles), len(set(titles)))
         self.assertEqual(len(descriptions), len(set(descriptions)))
 
@@ -379,6 +504,17 @@ class MetadataAndSitemapTests(unittest.TestCase):
         self.assertEqual({"https://salaam.center" + route for route in SITEMAP_ROUTES}, set(locations))
         self.assertTrue(all(value.startswith("https://salaam.center") for value in locations))
         self.assertFalse(any("success" in value or "salaamcenter.org" in value for value in locations))
+        self.assertFalse(any(node.tag.endswith("lastmod") for node in root.iter()))
+
+    def test_robots_allows_crawling_and_declares_only_the_apex_sitemap(self):
+        robots = (ROOT / "robots.txt").read_text(encoding="utf-8")
+        self.assertEqual(
+            "User-agent: *\nAllow: /\n\nSitemap: https://salaam.center/sitemap.xml\n",
+            robots,
+        )
+        self.assertNotIn("Disallow: /", robots)
+        self.assertNotIn("www.salaam.center", robots)
+        self.assertNotIn("salaamcenter.org", robots)
 
     def test_structured_data_is_valid_and_limited_to_approved_home_facts(self):
         blocks = []
@@ -417,7 +553,7 @@ class ContactAndPolicyTests(unittest.TestCase):
         self.assertIn('href="/contact/"', footer)
         self.assertNotRegex(contact + footer, r"(?i)mailto:|\btel:|hello@salaam\.center")
 
-    def test_privacy_terms_and_no_analytics_position_are_explicit(self):
+    def test_final_privacy_terms_and_no_tracking_position_are_explicit(self):
         privacy = (ROOT / "privacy-policy/index.html").read_text(encoding="utf-8")
         terms = (ROOT / "terms/index.html").read_text(encoding="utf-8")
         docs = "\n".join((ROOT / path).read_text(encoding="utf-8") for path in (
@@ -425,18 +561,27 @@ class ContactAndPolicyTests(unittest.TestCase):
         for phrase in (
             "locally in your browser", "does not submit or store", "WhatsApp",
             "third-party service", "No analytics", "No advertising pixels",
-            "controller identity",
+            "Salaam Center", "Sabadell, Barcelona", "+34 614 401 172",
+            "22 July 2026", "press Send", "access", "correction", "deletion",
+            "restriction", "objection", "identity verification",
         ):
             self.assertIn(phrase.casefold(), privacy.casefold())
-        self.assertNotIn("formspree", privacy.casefold())
+        for forbidden in ("formspree", "pre-launch", "prelaunch", "not the final", "pending"):
+            self.assertNotIn(forbidden, privacy.casefold())
         for phrase in (
-            "not the final contractual Terms and Conditions", "WhatsApp message is an enquiry",
-            "not a confirmed booking", "no payment obligation", "Legal operator identity",
+            "WhatsApp message is an enquiry", "no payment obligation",
+            "Salaam Center", "Sabadell, Barcelona", "+34 614 401 172",
+            "22 July 2026", "40-minute", "No automatic renewal",
+            "four late-cancellation make-up credits", "not an academic accreditation",
+            "consumer cancellation, refund and withdrawal rights",
+            "parent or guardian involvement and permission",
         ):
             self.assertIn(phrase.casefold(), terms.casefold())
+        for forbidden in ("formspree", "pre-launch", "prelaunch", "not the final", "pending"):
+            self.assertNotIn(forbidden, terms.casefold())
         self.assertIn("no analytics", docs.casefold())
         self.assertIn("no advertising pixels", docs.casefold())
-        self.assertIn("separate future approval", docs.casefold())
+        self.assertIn("search console", docs.casefold())
 
     def test_approved_facts_do_not_contradict_the_locked_contact_decision(self):
         facts = (ROOT / "SALAM-CENTER-APPROVED-FACTS.md").read_text(encoding="utf-8")
@@ -445,6 +590,31 @@ class ContactAndPolicyTests(unittest.TestCase):
         self.assertIn("Domain email is not required", facts)
         self.assertIn("Formspree is superseded", facts)
         self.assertIn("Cloudflare Pages is the production hosting source of truth", facts)
+
+    def test_final_legal_pages_avoid_unsupported_legal_and_service_claims(self):
+        privacy = (ROOT / "privacy-policy/index.html").read_text(encoding="utf-8")
+        terms = (ROOT / "terms/index.html").read_text(encoding="utf-8")
+        for pattern in (
+            r"(?i)company registration",
+            r"(?i)data.protection officer|\bDPO\b",
+            r"(?i)mailto:|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}",
+            r"(?i)telephone-call service|call us",
+            r"(?i)guaranteed deletion|deleted within \d+ days",
+            r"(?i)end-to-end encrypted|guaranteed encryption",
+            r"(?i)guaranteed data location|stored only in",
+            r"(?i)guaranteed international transfer",
+        ):
+            self.assertNotRegex(privacy, pattern)
+        for pattern in (
+            r"(?i)all payments are non-refundable|no refunds",
+            r"(?i)no (?:consumer )?withdrawal right",
+            r"(?i)exclusive jurisdiction|exclusive courts?",
+            r"(?i)(?:tax|VAT) (?:is|are) included",
+            r"(?i)accredited certificate|(?:is|provides) an academic accreditation",
+            r"(?i)guaranteed (?:result|outcome|teacher|schedule)",
+            r"(?i)automatic recurring billing|automatically billed",
+        ):
+            self.assertNotRegex(terms, pattern)
 
     def test_obsolete_disabled_form_honeypot_and_acknowledgement_styles_are_removed(self):
         css = (ROOT / "assets/css/styles.css").read_text(encoding="utf-8")

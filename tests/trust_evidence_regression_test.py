@@ -89,6 +89,23 @@ def certificate_benefit(weeks: int = 12) -> str:
     )
 
 
+def terms_plan_matrix() -> str:
+    rows = (
+        (4, 1, 4, 49),
+        (4, 2, 8, 69),
+        (4, 4, 16, 99),
+        (12, 1, 12, 119),
+        (12, 2, 24, 129),
+        (12, 4, 48, 229),
+    )
+    items = "".join(
+        f"<li>{weeks}-week plan, {frequency} class{'es' if frequency != 1 else ''} "
+        f"per week: {classes} paid classes, €{price} total.</li>"
+        for weeks, frequency, classes, price in rows
+    )
+    return f"<section><h2>Private Quran and Dari/Persian plans</h2><ul>{items}</ul></section>"
+
+
 class SurfaceClassificationTests(unittest.TestCase):
     def test_authority_documents_and_tests_are_documentation_only(self):
         root = Path("C:/repo")
@@ -594,6 +611,7 @@ class ClaimRuleTests(unittest.TestCase):
     def test_certificate_exception_requires_the_full_12_week_eligibility_context(self):
         approved = certificate_benefit()
         self.assertEqual((), html_findings(approved))
+        self.assertEqual((), html_findings(approved, "terms/index.html"))
         for markup in (
             certificate_benefit(4),
             approved.replace(
@@ -609,6 +627,19 @@ class ClaimRuleTests(unittest.TestCase):
                 self.assertTrue(html_findings(markup))
         self.assertTrue(findings("Digital certificate of completion."))
         self.assertTrue(findings("At least 80% of scheduled paid classes must be completed."))
+
+    def test_terms_price_exception_requires_the_complete_exact_six_plan_matrix(self):
+        approved = terms_plan_matrix()
+        self.assertEqual((), html_findings(approved, "terms/index.html"))
+        self.assertTrue(html_findings(approved, "index.html"))
+        for unsafe in (
+            approved.replace("€49 total", "€50 total"),
+            approved.replace("4 paid classes", "5 paid classes", 1),
+            approved.replace("12-week plan, 4 classes", "12-week plan, 5 classes"),
+            approved.replace("<li>12-week plan, 4 classes per week: 48 paid classes, €229 total.</li>", ""),
+        ):
+            with self.subTest(unsafe=unsafe):
+                self.assertTrue(html_findings(unsafe, "terms/index.html"))
 
     def test_unapproved_commercial_claims_fail_on_every_public_surface(self):
         prohibited = (
@@ -1060,6 +1091,38 @@ class ClaimRuleTests(unittest.TestCase):
         self.assertFalse({
             item.category for item in findings(safe)
         } & {"unsupported legal identity", "unsupported postal address"})
+
+    def test_exact_approved_legal_details_are_allowed_only_on_final_legal_pages(self):
+        privacy = (
+            "<p>Operator and controller: Salaam Center</p>"
+            "<p>Correspondence address: Sabadell, Barcelona</p>"
+        )
+        terms = (
+            "<p>Operator: Salaam Center</p>"
+            "<p>Correspondence address: Sabadell, Barcelona</p>"
+        )
+        legal_categories = {"unsupported legal identity", "unsupported postal address"}
+        self.assertFalse(
+            {item.category for item in html_findings(privacy, "privacy-policy/index.html")}
+            & legal_categories
+        )
+        self.assertFalse(
+            {item.category for item in html_findings(terms, "terms/index.html")}
+            & legal_categories
+        )
+        for markup, path in (
+            (privacy, "index.html"),
+            (terms, "pricing/index.html"),
+            (privacy.replace("Salaam Center", "Another operator"), "privacy-policy/index.html"),
+            (privacy.replace("Sabadell, Barcelona", "Barcelona"), "privacy-policy/index.html"),
+            ("<address>Sabadell, Barcelona</address>", "privacy-policy/index.html"),
+            ('<script type="application/ld+json">{"@type":"PostalAddress"}</script>', "terms/index.html"),
+        ):
+            with self.subTest(path=path, markup=markup):
+                self.assertTrue(
+                    {item.category for item in html_findings(markup, path)}
+                    & legal_categories
+                )
 
 
 class RepositoryTrustEvidenceTests(unittest.TestCase):

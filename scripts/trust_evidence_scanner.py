@@ -163,8 +163,31 @@ APPROVED_CERTIFICATE_EVIDENCE = (
     "It is not an academic accreditation, qualification or government-recognised certificate.",
 )
 
+APPROVED_TERMS_PLAN_EVIDENCE = tuple(
+    f"{weeks}-week plan, {frequency} "
+    f"{'class' if frequency == 1 else 'classes'} per week: "
+    f"{classes} paid classes, €{price} total."
+    for weeks, frequency, classes, price, _ in APPROVED_PRIVATE_PLAN_EVIDENCE
+)
+
+_APPROVED_LEGAL_DISCLOSURES = {
+    "privacy-policy/index.html": (
+        "Operator and controller: Salaam Center",
+        "Correspondence address: Sabadell, Barcelona",
+    ),
+    "terms/index.html": (
+        "Operator: Salaam Center",
+        "Correspondence address: Sabadell, Barcelona",
+    ),
+}
+
 _APPROVED_TEACHER_PATHS = frozenset({"index.html", "teachers/index.html"})
 _APPROVED_STUDENT_PATHS = frozenset({"index.html"})
+_APPROVED_CERTIFICATE_PATHS = frozenset({
+    "pricing/index.html",
+    "terms/index.html",
+})
+_VISIBLE_BOUNDARY = "\n\u2063\n"
 
 
 @dataclass(frozen=True)
@@ -1145,9 +1168,9 @@ class _MappedTextBuilder:
                 line += 1
 
     def boundary(self, line: int) -> None:
-        if not self.characters or self.characters[-3:] == list("\n\u2063\n"):
+        if not self.characters or self.characters[-3:] == list(_VISIBLE_BOUNDARY):
             return
-        for character in "\n\u2063\n":
+        for character in _VISIBLE_BOUNDARY:
             self.characters.append(character)
             self.lines.append(line)
 
@@ -1157,6 +1180,10 @@ class _MappedTextBuilder:
         while position != -1:
             self.protected_ranges.append((position, position + len(value)))
             position = text.find(value, position + len(value), end)
+
+    def protect_span(self, start: int, end: int) -> None:
+        if 0 <= start < end <= len(self.characters):
+            self.protected_ranges.append((start, end))
 
 
 @dataclass
@@ -1181,6 +1208,7 @@ class _PublicHTMLParser(HTMLParser):
         self._in_title = False
         self._script_surface: SurfaceType | None = None
         self._evidence_card: _EvidenceCard | None = None
+        self._terms_section_starts: list[int] = []
         self._whatsapp_form_line: int | None = None
         self._whatsapp_form_has_button = False
         self._whatsapp_form_is_unsafe = False
@@ -1215,6 +1243,13 @@ class _PublicHTMLParser(HTMLParser):
 
         if not self._in_head and normalized_tag in _VISIBLE_BLOCK_TAGS:
             self.visible.boundary(line)
+
+        if (
+            not self._in_head
+            and normalized_tag == "section"
+            and self._relative_path == "terms/index.html"
+        ):
+            self._terms_section_starts.append(len(self.visible))
 
         if (
             self._evidence_card is not None
@@ -1307,6 +1342,15 @@ class _PublicHTMLParser(HTMLParser):
             if self._evidence_card.depth == 0:
                 self._protect_approved_card(self._evidence_card, len(self.visible))
                 self._evidence_card = None
+        if (
+            normalized_tag == "section"
+            and self._relative_path == "terms/index.html"
+            and self._terms_section_starts
+        ):
+            self._protect_approved_terms_plan_matrix(
+                self._terms_section_starts.pop(),
+                len(self.visible),
+            )
         if normalized_tag == "head":
             self._in_head = False
         elif normalized_tag == "title":
@@ -1462,16 +1506,19 @@ class _PublicHTMLParser(HTMLParser):
                 self.visible.protect("From €49 for a 4-week plan", card.start, end)
         elif (
             card.kind == "benefit-card--extended"
-            and self._relative_path == "pricing/index.html"
+            and self._relative_path in _APPROVED_CERTIFICATE_PATHS
             and card.attributes.get("data-plan-weeks") == "12"
             and all(value in card_text for value in APPROVED_CERTIFICATE_EVIDENCE)
         ):
-            self.visible.protect("Digital certificate of completion", card.start, end)
-            self.visible.protect(
-                "At least 80% of scheduled paid classes must be completed.",
-                card.start,
-                end,
-            )
+            if self._relative_path == "terms/index.html":
+                self._protect_exact_terms_certificate_context(card, end)
+            else:
+                self.visible.protect("Digital certificate of completion", card.start, end)
+                self.visible.protect(
+                    "At least 80% of scheduled paid classes must be completed.",
+                    card.start,
+                    end,
+                )
         elif card.kind == "confirmed-success" and self._relative_path == "success/index.html":
             required = (
                 "Your trial request was submitted",
@@ -1481,6 +1528,95 @@ class _PublicHTMLParser(HTMLParser):
             if all(value in card_text for value in required):
                 self.visible.protect(required[0], card.start, end)
                 self.visible.protect(required[1], card.start, end)
+
+    def protect_approved_legal_disclosures(self) -> None:
+        """Protect only the exact approved legal disclosure blocks on legal pages."""
+        expected = _APPROVED_LEGAL_DISCLOSURES.get(self._relative_path)
+        if expected is None:
+            return
+
+        text = self.visible.text
+        block_spans: dict[str, list[tuple[int, int]]] = {
+            value: [] for value in expected
+        }
+        offset = 0
+        for block in text.split(_VISIBLE_BOUNDARY):
+            block_start = offset
+            stripped = block.strip()
+            if stripped in block_spans:
+                value_start = block_start + block.find(stripped)
+                block_spans[stripped].append(
+                    (value_start, value_start + len(stripped))
+                )
+            offset += len(block) + len(_VISIBLE_BOUNDARY)
+
+        # Requiring the complete pair exactly once keeps this exception from
+        # becoming a general operator/address whitelist on either legal page.
+        if not all(len(block_spans[value]) == 1 for value in expected):
+            return
+        for value in expected:
+            self.visible.protect_span(*block_spans[value][0])
+
+    def _protect_approved_terms_plan_matrix(self, start: int, end: int) -> None:
+        """Protect prices only inside the complete, exact six-row Terms matrix."""
+        section_text = self.visible.text[start:end]
+        heading = "Private Quran and Dari/Persian plans"
+        if section_text.count(heading) != 1:
+            return
+
+        row_positions: list[int] = []
+        for row in APPROVED_TERMS_PLAN_EVIDENCE:
+            if section_text.count(row) != 1:
+                return
+            row_positions.append(section_text.find(row))
+        if row_positions != sorted(row_positions):
+            return
+        if section_text.find(heading) > row_positions[0]:
+            return
+
+        price_matches = tuple(re.finditer(r"€\d[\d,.]*", section_text))
+        expected_prices = tuple(
+            f"€{price}"
+            for _, _, _, price, _ in APPROVED_PRIVATE_PLAN_EVIDENCE
+        )
+        if tuple(match.group(0) for match in price_matches) != expected_prices:
+            return
+
+        for match in price_matches:
+            self.visible.protect_span(start + match.start(), start + match.end())
+
+    def _protect_exact_terms_certificate_context(
+        self,
+        card: _EvidenceCard,
+        end: int,
+    ) -> None:
+        card_text = self.visible.text[card.start:end]
+        certificate_phrase = "Digital certificate of completion"
+        percentage_sentence = (
+            "At least 80% of scheduled paid classes must be completed."
+        )
+        if not all(
+            card_text.count(value) == 1
+            for value in APPROVED_CERTIFICATE_EVIDENCE
+        ):
+            return
+
+        certificate_matches = tuple(
+            re.finditer(re.escape(certificate_phrase), card_text)
+        )
+        percentage_matches = tuple(re.finditer(r"\b\d{1,3}(?:\.\d+)?\s*%", card_text))
+        if len(certificate_matches) != 2:
+            return
+        if tuple(match.group(0) for match in percentage_matches) != ("80%",):
+            return
+        if card_text.count(percentage_sentence) != 1:
+            return
+
+        for match in (*certificate_matches, *percentage_matches):
+            self.visible.protect_span(
+                card.start + match.start(),
+                card.start + match.end(),
+            )
 
 
 def _resolve_local_script(root: Path, html_path: Path, source: str) -> Path | None:
@@ -1529,6 +1665,7 @@ def extract_public_surfaces(
         parser = _PublicHTMLParser(Path(relative_path).as_posix())
         parser.feed(html_path.read_text(encoding="utf-8"))
         parser.close()
+        parser.protect_approved_legal_disclosures()
         if parser.visible.text.strip():
             surfaces.append(
                 SurfaceText(

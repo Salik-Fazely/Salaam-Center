@@ -113,7 +113,7 @@ class VideoPrivacyAccessibilityTests(unittest.TestCase):
         self.assertIn("if (isActivated) return", script)
         self.assertIn("!title", script)
 
-    def test_privacy_placeholder_describes_thumbnail_and_player_behavior_accurately(self):
+    def test_final_privacy_notice_describes_thumbnail_and_player_behavior_accurately(self):
         privacy = source(PRIVACY)
         self.assertIn("Pages with video samples use YouTube-hosted thumbnails.", privacy)
         self.assertIn("A privacy-enhanced YouTube player is created only after you choose to play a video.", privacy)

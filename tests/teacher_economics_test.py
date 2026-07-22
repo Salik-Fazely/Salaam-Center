@@ -119,7 +119,7 @@ class TeacherEconomicsTests(unittest.TestCase):
         documents = [source(relative_path) for relative_path in AUTHORITY_PATHS]
         for document in documents:
             self.assertIn("Teacher-compensation review", document)
-            self.assertIn("resolved for current pre-launch pricing", document)
+            self.assertIn("resolved for current production pricing", document)
         operations = documents[1]
         for consideration in (
             "Payment-provider fees",

@@ -25,6 +25,7 @@ CORE_PAGES = (
     "success/index.html",
     "404.html",
 )
+NOINDEX_PAGES = {"success/index.html", "404.html"}
 
 EXPECTED_NAVIGATION = (
     ("Home", "/"),
@@ -167,7 +168,7 @@ class BrandAndArchitectureTests(unittest.TestCase):
 
 
 class IntegrationAndMetadataSafetyTests(unittest.TestCase):
-    def test_all_public_pages_are_noindex_nofollow_with_prepared_production_canonicals(self):
+    def test_indexable_pages_are_open_while_status_and_error_pages_remain_noindex(self):
         for path in public_html_files():
             relative_path = path.relative_to(ROOT).as_posix()
             parser = parse(relative_path)
@@ -176,7 +177,11 @@ class IntegrationAndMetadataSafetyTests(unittest.TestCase):
                 for item in parser.metas
                 if item.get("name", "").lower() == "robots"
             ]
-            self.assertEqual(["noindex,nofollow"], robots, relative_path)
+            self.assertEqual(
+                ["noindex,nofollow"] if relative_path in NOINDEX_PAGES else [],
+                robots,
+                relative_path,
+            )
             canonicals = [
                 item.get("href")
                 for item in parser.links
@@ -223,7 +228,7 @@ class IntegrationAndMetadataSafetyTests(unittest.TestCase):
         self.assertFalse(workflows.exists() and any(workflows.iterdir()))
 
 
-class ProgramAndPrelaunchContentTests(unittest.TestCase):
+class ProgramAndProductionContentTests(unittest.TestCase):
     def test_launch_programs_and_eligibility_match_approved_facts(self):
         expected = {
             "programs/quran/index.html": (
@@ -275,18 +280,31 @@ class ProgramAndPrelaunchContentTests(unittest.TestCase):
         for claim in ("Thank you", "successfully submitted", "we received your request", "message sent", "trial confirmed"):
             self.assertNotIn(claim.lower(), text.lower())
 
-    def test_privacy_and_terms_are_honest_placeholders(self):
+    def test_privacy_and_terms_are_final_operational_notices(self):
         privacy = visible_text("privacy-policy/index.html")
         terms = visible_text("terms/index.html")
-        self.assertIn("Pre-launch privacy information", privacy)
-        self.assertIn("does not submit or store", privacy)
-        self.assertIn("locally in your browser", privacy)
-        self.assertIn("Terms and conditions are being prepared", terms)
-        self.assertIn("A WhatsApp message is an enquiry", terms)
-        self.assertIn(
-            "Complete terms will be provided before any payment is accepted.",
-            terms,
-        )
+        for value in (
+            "Privacy Policy",
+            "Salaam Center",
+            "Sabadell, Barcelona",
+            "+34 614 401 172",
+            "does not submit or store",
+            "locally in your browser",
+            "22 July 2026",
+        ):
+            self.assertIn(value, privacy)
+        for value in (
+            "Terms and Conditions",
+            "Salaam Center",
+            "Sabadell, Barcelona",
+            "+34 614 401 172",
+            "A WhatsApp message is an enquiry",
+            "consumer cancellation, refund and withdrawal rights",
+            "22 July 2026",
+        ):
+            self.assertIn(value.casefold(), terms.casefold())
+        for page in (privacy, terms):
+            self.assertNotRegex(page, r"(?i)pre-?launch|not the final|\bpending\b|formspree")
 
 
 class TeacherAndMediaPreservationTests(unittest.TestCase):

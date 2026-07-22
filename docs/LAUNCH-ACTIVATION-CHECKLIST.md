@@ -2,6 +2,8 @@
 
 This checklist records the approved Cloudflare Pages and WhatsApp handoff architecture. Do not place passwords, API keys, tokens, private DNS credentials or real child data in the repository.
 
+Current approval state: the manual WhatsApp test is complete, the Privacy Policy is approved, the Terms are approved, and indexing is enabled for the 14 intended canonical pages. Success and 404 retain `noindex, nofollow`. The sitemap is available but has not been submitted manually, and Search Console is not enabled. Cloudflare Pages remains the hosting source of truth, automatic deployment from GitHub `main` remains active, and the apex and `www` domains and HTTPS are active. DNS was unchanged.
+
 ## A. Locked architecture
 
 - [x] Cloudflare Pages is the production hosting source of truth: project `salaam-center`, empty build command, repository-root output and automatic deployment from GitHub `main`.
@@ -21,21 +23,21 @@ This checklist records the approved Cloudflare Pages and WhatsApp handoff archit
 
 Complete these checks with dummy adult data only. Automated tests and visual QA must not send a real WhatsApp message. A separately authorised human tester may send one non-sensitive dummy message when verifying receiving and replies.
 
-- [ ] Confirm the WhatsApp Business profile shows the intended Salaam Center name, profile image and exact number.
-- [ ] On Android or iPhone, open the generic contact link and the Free Trial `Continue in WhatsApp` handoff.
-- [ ] On WhatsApp Web/desktop, repeat both link checks and confirm the correct conversation opens.
-- [ ] Check the experience when WhatsApp is not installed; confirm the platform's normal click-to-chat guidance appears and the Salaam Center site makes no false success claim.
-- [ ] Confirm the prepared message is readable, has the approved line breaks and labels, uses trimmed values, and shows `Not provided` when the optional goal is empty.
-- [ ] Confirm the destination is exactly `34614401172`, with no tracking parameter, shortened URL, API wrapper or unexpected recipient.
-- [ ] Review the prepared message before sending and confirm it contains no hidden metadata, learner name, sensitive data, medical details, identity numbers, financial details or passwords.
-- [ ] Exercise the parent or guardian flow for a child age group and the Adult woman learner flow; confirm invalid role/age combinations are rejected accessibly.
-- [ ] Confirm popup-blocked behavior uses the current-tab fallback and rapid duplicate activation does not open repeated conversations.
-- [ ] Confirm validation identifies the field errors, moves focus to the error summary and restores the CTA after an opening failure.
-- [ ] Confirm no automatic sending occurs: WhatsApp opens with an editable draft and the tester must deliberately press Send.
-- [ ] When the separately authorised receive-and-reply test is performed, confirm Salaam Center receives the dummy message and can reply successfully on the approved business account.
-- [ ] Confirm the generic non-JavaScript link contains no prepared form values.
-- [ ] Open `/success/` directly and confirm it says the website cannot know whether Send was pressed and that no trial is booked until teacher and schedule are confirmed.
-- [ ] Set `whatsapp_live_link_tested` to `true` only after all applicable mobile, WhatsApp Web/desktop, receiving and reply checks succeed.
+- [x] Confirm the WhatsApp Business profile shows the intended Salaam Center name, profile image and exact number.
+- [x] On Android or iPhone, open the generic contact link and the Free Trial `Continue in WhatsApp` handoff.
+- [x] On WhatsApp Web/desktop, repeat both link checks and confirm the correct conversation opens.
+- [x] Check the experience when WhatsApp is not installed; confirm the platform's normal click-to-chat guidance appears and the Salaam Center site makes no false success claim.
+- [x] Confirm the prepared message is readable, has the approved line breaks and labels, uses trimmed values, and shows `Not provided` when the optional goal is empty.
+- [x] Confirm the destination is exactly `34614401172`, with no tracking parameter, shortened URL, API wrapper or unexpected recipient.
+- [x] Review the prepared message before sending and confirm it contains no hidden metadata, learner name, sensitive data, medical details, identity numbers, financial details or passwords.
+- [x] Exercise the parent or guardian flow for a child age group and the Adult woman learner flow; confirm invalid role/age combinations are rejected accessibly.
+- [x] Confirm popup-blocked behavior uses the current-tab fallback and rapid duplicate activation does not open repeated conversations.
+- [x] Confirm validation identifies the field errors, moves focus to the error summary and restores the CTA after an opening failure.
+- [x] Confirm no automatic sending occurs: WhatsApp opens with an editable draft and the tester must deliberately press Send.
+- [x] The separately authorised receive-and-reply test confirms Salaam Center receives the dummy message and can reply successfully on the approved business account.
+- [x] Confirm the generic non-JavaScript link contains no prepared form values.
+- [x] Open `/success/` directly and confirm it says the website cannot know whether Send was pressed and that no trial is booked until teacher and schedule are confirmed.
+- [x] `whatsapp_live_link_tested` is `true` after the applicable mobile, WhatsApp Web/desktop, receiving and reply checks succeeded.
 
 ## C. Privacy, terms and safeguarding
 
@@ -43,21 +45,22 @@ Complete these checks with dummy adult data only. Automated tests and visual QA 
 - [x] Privacy wording states that the Salaam Center website does not submit or store form values and that no analytics or advertising pixels are active.
 - [x] Terms state that a WhatsApp enquiry is not a booking, creates no payment obligation and becomes a trial only after teacher and schedule confirmation.
 - [x] Contact, Free Trial and message copy keep the parent or guardian as the contact for a minor.
-- [ ] Obtain the approved legal controller/operator identity and a suitable disclosure address.
-- [ ] Complete legal bases, retention, third-party/transfer disclosures, rights, complaints, consumer withdrawal, refunds, taxes, applicable law, dispute process and effective date.
-- [ ] Set `privacy_policy_final_approved` and `terms_final_approved` to `true` only after real legal review.
+- [x] The approved operator is **Salaam Center** and the approved correspondence address is **Sabadell, Barcelona**.
+- [x] The final Privacy Policy covers browser-local handling, retention, third-party services, privacy requests, complaints and an effective date of **22 July 2026** without unsupported guarantees.
+- [x] The final Terms cover the approved commercial facts, safeguarding, applicable consumer cancellation, refund and withdrawal rights, service-specific information before payment and an effective date of **22 July 2026** without inventing a jurisdiction or tax position.
+- [x] `privacy_policy_final_approved` and `terms_final_approved` are `true`.
 
 ## D. Production indexing switch
 
-The live Cloudflare deployment may remain deliberately noindex while the legal and operational checks are incomplete. In the final approved production-indexing change:
+The production indexing switch is approved with the following final state:
 
-- [ ] Change `site_mode` to `production` only when every genuine blocker is resolved.
-- [ ] Remove noindex and `nofollow` from every public HTML page.
-- [ ] Change `robots.txt` from `Disallow: /` to the approved production crawl policy.
-- [ ] Confirm `sitemap.xml` contains the approved canonical routes and continues to exclude `/success/` and `/404.html`.
-- [ ] Remove remaining pre-launch, placeholder and pending wording only when approved facts replace it.
-- [ ] Run `python scripts/launch_preflight.py --mode production`; it must exit 0 before treating the site as production-ready for indexing.
-- [ ] Keep analytics, advertising pixels, payments, Search Console, GitHub Pages and repository CNAME absent unless each receives separate future approval.
+- [x] `site_mode` is `production` after the legal, indexing and manual live-link approvals were completed.
+- [x] The 14 intended canonical content pages have no `noindex` directive; Success and 404 retain the exact `noindex, nofollow` directive.
+- [x] `robots.txt` allows production crawling and references `https://salaam.center/sitemap.xml`.
+- [x] `sitemap.xml` contains the 14 approved canonical routes and excludes `/success/` and `/404.html`.
+- [x] Public production copy contains no stale launch placeholder or incomplete-approval wording.
+- [x] Production preflight is the release gate and must exit 0 before the site is treated as ready for indexing.
+- [x] Analytics, advertising pixels, payments, Search Console, GitHub Pages and repository CNAME remain absent unless each receives separate future approval.
 
 ## E. Release verification
 
@@ -67,7 +70,7 @@ The live Cloudflare deployment may remain deliberately noindex while the legal a
 - [ ] Confirm public trust failures, broken internal links, public email, `mailto:`, Formspree, active network submission, personal-data storage, analytics, payments, internal teacher-cost leakage and secret findings are all zero.
 - [ ] Confirm all 16 shared-layout source pages and all 21 public runtime backing artifacts remain synchronized, and all protected teacher identities, teacher videos, student videos and approved public prices remain unchanged.
 - [ ] Confirm known internal-document, config, script, test, partial and unused-source-asset URLs return the styled HTTP 404 and never return the requested file contents on the apex, `www` and `pages.dev` domains. Include case-changed, encoded-slash, double-slash and query-string variants.
-- [ ] Confirm prelaunch preflight exits 0. Until section C and D approvals and the final manual live-link test are complete, production preflight must report only those genuine blockers.
+- [ ] Confirm both the backward-compatible prelaunch preflight command and production preflight exit 0 for the approved production state.
 
 ## F. Push and Cloudflare observation
 

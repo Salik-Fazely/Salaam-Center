@@ -26,6 +26,7 @@ PUBLIC_PAGES = (
     "success/index.html",
     "404.html",
 )
+NOINDEX_PAGES = {"success/index.html", "404.html"}
 
 
 def read(relative: str) -> str:
@@ -35,7 +36,7 @@ def read(relative: str) -> str:
 class WhatsAppConfigurationTests(unittest.TestCase):
     def test_launch_configuration_describes_the_exact_cloudflare_whatsapp_architecture(self):
         data = json.loads(CONFIG.read_text(encoding="utf-8"))
-        self.assertEqual("prelaunch", data["site_mode"])
+        self.assertEqual("production", data["site_mode"])
         self.assertEqual("https://salaam.center", data["production_origin"])
         self.assertEqual(["salaam.center", "www.salaam.center"], data["production_domains"])
         self.assertEqual("cloudflare_pages", data["hosting_source"])
@@ -48,11 +49,16 @@ class WhatsAppConfigurationTests(unittest.TestCase):
         self.assertRegex(data["whatsapp_number"], r"^[1-9]\d{7,14}$")
         self.assertIs(data["whatsapp_number_verified"], True)
         self.assertIs(data["whatsapp_link_verified"], True)
-        self.assertIs(data["whatsapp_live_link_tested"], False)
+        self.assertIs(data["whatsapp_live_link_tested"], True)
         self.assertEqual("client_side_whatsapp_handoff", data["form_submission_mode"])
         self.assertEqual("none", data["booking_provider"])
         self.assertEqual("", data["booking_endpoint"])
         self.assertEqual("none", data["analytics_mode"])
+        self.assertEqual("Salaam Center", data["legal_controller_name"])
+        self.assertEqual("Sabadell, Barcelona", data["legal_controller_address"])
+        self.assertIs(data["privacy_policy_final_approved"], True)
+        self.assertIs(data["terms_final_approved"], True)
+        self.assertIs(data["search_console_enabled"], False)
         self.assertIs(data["github_pages_enabled"], False)
         self.assertIs(data["cname_required"], False)
 
@@ -121,24 +127,31 @@ class PublicWhatsAppArchitectureTests(unittest.TestCase):
             "no analytics",
             "no advertising pixels",
             "privacy-enhanced",
-            "pre-launch",
-            "not the final",
+            "sabadell, barcelona",
+            "+34 614 401 172",
+            "22 july 2026",
+            "press send",
+            "identity verification",
         ):
             self.assertIn(phrase, privacy)
-        self.assertNotIn("formspree", privacy)
+        self.assertNotRegex(privacy, r"formspree|pre-?launch|not the final|\bpending\b")
         self.assertNotRegex(privacy, r"[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}")
 
     def test_terms_describe_whatsapp_as_an_enquiry_without_booking_or_payment_obligation(self):
         terms = read("terms/index.html").casefold()
         for phrase in (
             "whatsapp message is an enquiry",
-            "not a confirmed booking",
             "no payment obligation",
             "teacher and schedule availability",
-            "final terms",
-            "before any payment is accepted",
+            "paid lessons begin only after",
+            "consumer cancellation, refund and withdrawal rights",
+            "four late-cancellation make-up credits",
+            "not an academic accreditation",
+            "parent or guardian involvement and permission",
+            "22 july 2026",
         ):
             self.assertIn(phrase, terms)
+        self.assertNotRegex(terms, r"formspree|pre-?launch|not the final|\bpending\b")
 
     def test_success_route_never_claims_a_submission_or_booking(self):
         success = read("success/index.html")
@@ -153,10 +166,14 @@ class PublicWhatsAppArchitectureTests(unittest.TestCase):
         )
         self.assertNotIn("trial-form.js", success)
 
-    def test_all_public_pages_remain_noindex_and_have_no_analytics_or_payment_integration(self):
+    def test_indexing_split_and_absent_analytics_or_payment_integration(self):
         public = "\n".join(read(path) for path in PUBLIC_PAGES)
         for path in PUBLIC_PAGES:
-            self.assertIn('name="robots" content="noindex, nofollow"', read(path), path)
+            robots = 'name="robots" content="noindex, nofollow"'
+            if path in NOINDEX_PAGES:
+                self.assertIn(robots, read(path), path)
+            else:
+                self.assertNotIn(robots, read(path), path)
         self.assertNotRegex(
             public,
             r"(?i)googletagmanager|google-analytics|\bgtag\s*\(|\bfbq\s*\(|connect\.facebook\.net",
@@ -200,6 +217,13 @@ class InfrastructureAndDocumentationTests(unittest.TestCase):
             "no payments",
             "dns must not be changed",
             "github pages must not be configured",
+            "approved for production indexing",
+            "manual whatsapp test is complete",
+            "privacy policy is approved",
+            "terms are approved",
+            "sabadell, barcelona",
+            "search console",
+            "sitemap is available but has not been submitted manually",
         ):
             self.assertIn(phrase, combined)
         checklist = read("docs/LAUNCH-ACTIVATION-CHECKLIST.md").casefold()
@@ -209,7 +233,7 @@ class InfrastructureAndDocumentationTests(unittest.TestCase):
             "whatsapp web",
             "prepared message",
             "sensitive data",
-            "remove noindex",
+            "indexing is enabled",
         ):
             self.assertIn(phrase, checklist)
 

@@ -54,7 +54,7 @@ def pricing_cards():
 
 
 class PricingPageTests(unittest.TestCase):
-    def test_pricing_page_has_exact_metadata_scope_and_prelaunch_safety(self):
+    def test_pricing_page_has_exact_metadata_scope_and_is_indexable(self):
         page = source("pricing/index.html")
         text = visible(page)
         self.assertIn(
@@ -65,7 +65,7 @@ class PricingPageTests(unittest.TestCase):
             '<meta name="description" content="Compare flexible 4-week and 12-week plans for private online Quran and Dari/Persian lessons. Every paid class is 40 minutes." />',
             page,
         )
-        self.assertIn('<meta name="robots" content="noindex, nofollow" />', page)
+        self.assertNotIn('<meta name="robots" content="noindex, nofollow" />', page)
         self.assertIn('<link rel="canonical" href="https://salaam.center/pricing/" />', page)
         self.assertIn("Private lesson plans", text)
         self.assertIn("Simple plans for consistent learning", text)
@@ -182,7 +182,7 @@ class PricingPageTests(unittest.TestCase):
         self.assertNotIn("VIP quiz access", text)
         self.assertNotIn("€50 value", text)
 
-    def test_policy_summary_covers_validity_absences_payment_and_refund_status(self):
+    def test_policy_summary_covers_validity_absences_payment_and_consumer_rights(self):
         text = visible(source("pricing/index.html"))
         for value in (
             "At least 24 hours’ notice",
@@ -197,7 +197,8 @@ class PricingPageTests(unittest.TestCase):
             "The 4-week plan has six-week final validity from the first paid class",
             "The 12-week plan has sixteen-week final validity from the first paid class",
             "After the trial and schedule confirmation, families receive the plan and payment information before paid lessons begin.",
-            "Families will review the complete payment, cancellation and refund terms before making a payment.",
+            "Consumer cancellation, refund and withdrawal rights apply where required by applicable law.",
+            "Any service-specific refund information is communicated before payment.",
         ):
             self.assertIn(value, text)
 
@@ -216,13 +217,16 @@ class PricingPageTests(unittest.TestCase):
             "What happens if the teacher cancels?",
             "Are Culture & Islamic Ethics classes included?",
             "Can I pay on the website?",
-            "Are refund terms final?",
+            "What refund and withdrawal rights apply?",
         ):
             self.assertIn(question, summaries)
         self.assertEqual(11, page.count("<details"))
         self.assertEqual(11, page.count("</details>"))
         self.assertIn("A separate plan is required for each program", visible(page))
-        self.assertIn("Not yet. Payment information is provided after the trial and schedule confirmation.", visible(page))
+        self.assertIn(
+            "No. Salaam Center does not collect online payments on this website. Payment information is provided after the trial and schedule confirmation.",
+            visible(page),
+        )
 
 
 class EnrolmentJourneyTests(unittest.TestCase):
@@ -296,7 +300,7 @@ class EnrolmentJourneyTests(unittest.TestCase):
         for value in (
             "The plan is selected after teacher and schedule availability are confirmed.",
             "Payment is made before paid lessons begin.",
-            "No automatic online enrolment is currently active.",
+            "The website does not create an automatic online enrolment.",
             "Group enrolment follows a published cohort schedule when one becomes available.",
         ):
             self.assertIn(value, process)
@@ -322,36 +326,52 @@ class EnrolmentJourneyTests(unittest.TestCase):
         self.assertIn('data-whatsapp-handoff="true"', trial_page)
         self.assertNotRegex(trial_page, r'<form\b[^>]+action=')
 
-    def test_terms_privacy_and_success_remain_truthful_prelaunch_surfaces(self):
+    def test_terms_privacy_and_success_are_truthful_production_surfaces(self):
         terms = visible(source("terms/index.html"))
-        self.assertIn(
-            "This page is a pre-launch summary and is not the final contractual Terms and Conditions. Complete terms will be provided before any payment is accepted.",
-            terms,
-        )
         for value in (
-            "Plans are per learner and per program",
-            "Classes are 40 minutes",
-            "Plans are paid in full before paid lessons begin",
-            "No automatic renewal",
-            "Scheduling is confirmed before payment",
+            "Terms and Conditions",
+            "Salaam Center",
+            "Sabadell, Barcelona",
+            "+34 614 401 172",
+            "22 July 2026",
+            "Prices are in EUR, per learner, for one selected program",
+            "Every class is 40 minutes",
+            "Plans are prepaid and do not renew automatically",
+            "Paid lessons begin only after the plan, schedule, these Terms and payment are confirmed",
             "At least 24 hours’ notice",
-            "Teacher cancellations are rescheduled",
-            "Final validity",
-            "Consumer withdrawal treatment",
-            "Final refund rules",
+            "Less than 24 hours’ notice",
+            "up to four late-cancellation make-up credits",
+            "A no-show is treated as a used class",
+            "teacher or Salaam Center cancels",
+            "six-week final validity",
+            "sixteen-week final validity",
+            "Consumer cancellation, refund and withdrawal rights apply where required by applicable law",
+            "service-specific refund information is communicated before payment",
+            "not an academic accreditation",
+            "Progress summaries are provided every four weeks",
+            "parent or guardian involvement and permission",
             "A WhatsApp message is an enquiry",
-            "not a confirmed booking",
             "no payment obligation",
         ):
             self.assertIn(value, terms)
+        self.assertNotRegex(terms, r"(?i)pre-?launch|not the final|\bpending\b|formspree")
 
-        privacy = visible(source("privacy-policy/index.html"))
+        privacy_source = source("privacy-policy/index.html")
+        self.assertEqual(
+            3,
+            privacy_source.count(
+                "contact arrangements for learners under 18 and user-activated video content"
+            ),
+        )
+        self.assertNotIn("minors' contact details", privacy_source)
+        privacy = visible(privacy_source)
         self.assertIn("does not submit or store", privacy)
         self.assertIn("locally in your browser", privacy)
         self.assertIn("WhatsApp is a third-party service", privacy)
-        self.assertIn("No payment collection is active.", privacy)
+        self.assertIn("No online payment collection is active on this website.", privacy)
         self.assertIn("No analytics are used.", privacy)
         self.assertNotIn("Formspree", privacy)
+        self.assertNotRegex(privacy, r"(?i)pre-?launch|not the final|\bpending\b")
 
         success = visible(source("success/index.html"))
         self.assertIn("Continue your conversation in WhatsApp", success)
@@ -367,7 +387,7 @@ class EnrolmentJourneyTests(unittest.TestCase):
 class CommercialDocumentationTests(unittest.TestCase):
     def test_approved_facts_promote_exact_pricing_and_resolved_public_rules(self):
         facts = source("SALAM-CENTER-APPROVED-FACTS.md")
-        self.assertIn("## 9. Approved pre-launch private-plan pricing", facts)
+        self.assertIn("## 9. Approved production private-plan pricing", facts)
         self.assertIn("## Approved public commercial facts", facts)
         for (weeks, frequency), (classes, price, saving) in PLAN_EVIDENCE.items():
             self.assertIn(f"{frequency} class{'es' if frequency != 1 else ''} per week", facts)
@@ -383,12 +403,15 @@ class CommercialDocumentationTests(unittest.TestCase):
             "At least 80% of scheduled paid classes",
             "Progress summary every four weeks",
             "Pricing for Afghan Culture & Islamic Ethics group classes will be published when cohort schedules and group arrangements are confirmed.",
-            "## Internal deployment blockers",
+            "## Internal operational status",
+            "approved for production indexing",
+            "Privacy Policy is approved",
+            "Terms and Conditions are approved",
         ):
             self.assertIn(value, facts)
         self.assertNotIn("## 10. Unresolved pricing rules", facts)
 
-    def test_operational_source_records_unit_economics_and_all_blockers(self):
+    def test_operational_source_records_unit_economics_and_all_statuses(self):
         document = source("docs/COMMERCIAL-AND-ENROLMENT.md")
         self.assertIn("# Salaam Center Commercial and Enrolment", document)
         self.assertIn("## Internal-only unit economics", document)
@@ -402,9 +425,9 @@ class CommercialDocumentationTests(unittest.TestCase):
         for value in ("19.0%", "37.7%", "22.9%"):
             self.assertIn(value, document)
         self.assertIn("Teacher-compensation review", document)
-        self.assertIn("resolved for current pre-launch pricing", document)
+        self.assertIn("resolved for current production pricing", document)
         self.assertIn("Final minimum net-margin policy", document)
-        for blocker in (
+        for status in (
             "Teacher-compensation review",
             "Gross-margin review",
             "Payment-provider selection",
@@ -424,7 +447,15 @@ class CommercialDocumentationTests(unittest.TestCase):
             "Production SEO",
             "Deployment approval",
         ):
-            self.assertIn(blocker, document)
+            self.assertIn(status, document)
+        for approved in (
+            "Final Terms and Conditions — approved",
+            "Final Privacy Policy — approved",
+            "Legal-entity information — approved",
+            "Production SEO — indexing enabled",
+            "Deployment approval — approved",
+        ):
+            self.assertIn(approved, document)
 
     def test_migration_and_scanner_docs_distinguish_new_approval_from_inherited_rules(self):
         migration = source("MIGRATION-SOURCE.md")

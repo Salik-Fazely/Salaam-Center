@@ -7,6 +7,7 @@ import json
 import re
 import sys
 import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
 from pathlib import Path
 
 sys.dont_write_bytecode = True
@@ -27,10 +28,14 @@ PUBLIC_PAGES = (
     "book-trial/index.html", "contact/index.html", "privacy-policy/index.html",
     "terms/index.html", "success/index.html", "404.html",
 )
+NOINDEX_PAGES = ("success/index.html", "404.html")
+INDEXABLE_PAGES = tuple(page for page in PUBLIC_PAGES if page not in NOINDEX_PAGES)
 PRODUCTION_ORIGIN = "https://salaam.center"
 PRODUCTION_DOMAINS = ["salaam.center", "www.salaam.center"]
 APPROVED_WHATSAPP_NUMBER = "34614401172"
 WHATSAPP_URL = f"https://wa.me/{APPROVED_WHATSAPP_NUMBER}"
+LEGAL_CONTROLLER_NAME = "Salaam Center"
+LEGAL_CONTROLLER_ADDRESS = "Sabadell, Barcelona"
 ROUTES = {
     "index.html": "/",
     "404.html": "/404.html",
@@ -59,8 +64,9 @@ PAYMENT_RE = re.compile(r"stripe\.com|paypal\.com|checkout\.js|buy now|pay now",
 SEARCH_CONSOLE_RE = re.compile(r"google-site-verification|search console verification", re.I)
 PLACEHOLDER_RE = re.compile(
     r"FORM_ID|WHATSAPP_NUMBER_DIGITS|\bTBD\b|\bTODO\b|pre-launch|prelaunch|"
-    r"being prepared|not yet open|\bpending\b|not active yet|will only become active|"
-    r"(?<![-_])\bplaceholder\b|not operationally verified",
+    r"being prepared|not yet open|\bnot final\b|\bpending\b|future activation|"
+    r"not active yet|will only become active|when enrolment opens|when enrollment opens|"
+    r"\bplaceholder\b|not operationally verified",
     re.I,
 )
 EMAIL_RE = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b|mailto:", re.I)
@@ -81,6 +87,23 @@ FALSE_SUCCESS_RE = re.compile(
     r"your trial request was submitted|we received your request)\b",
     re.I,
 )
+ECONOMICS_LEAK_RE = re.compile(
+    r"\bteacher(?:s'|s)?[-\s]+(?:rate|pay|payment|compensation|wage|salary|"
+    r"earnings|payout|cost|margin|economics)\b|"
+    r"\b(?:internal|unit)\s+economics\b|"
+    r"\b(?:gross|contribution)\s+margin\b|"
+    r"(?:€\s*8(?:[.,]00)?|8(?:[.,]00)?\s*€|EUR\s*8(?:[.,]00)?|"
+    r"8(?:[.,]00)?\s*EUR|eight euros?)\s+(?:per|/)\s+(?:each\s+)?"
+    r"(?:completed\s+)?(?:(?:40|forty)[-\s]+minute\s+)?(?:class|lesson)\b|"
+    r"\bcost\s+per\s+(?:completed\s+)?(?:class|lesson)\b",
+    re.I,
+)
+PRODUCTION_ROBOTS_DIRECTIVES = (
+    ("user-agent", "*"),
+    ("allow", "/"),
+    ("sitemap", f"{PRODUCTION_ORIGIN}/sitemap.xml"),
+)
+PRELAUNCH_ROBOTS_DIRECTIVES = (("user-agent", "*"), ("disallow", "/"))
 
 
 class Result:
@@ -115,14 +138,126 @@ def pages() -> dict[str, str]:
     return output
 
 
+def text_files_under(relative: str, suffixes: set[str]) -> list[Path]:
+    root = ROOT / relative
+    if not root.is_dir():
+        return []
+    return sorted(
+        (
+            path
+            for path in root.rglob("*")
+            if path.is_file() and path.suffix.casefold() in suffixes
+        ),
+        key=lambda path: path.as_posix(),
+    )
+
+
 def executable_source() -> str:
-    scripts = (ROOT / "assets/js/main.js", ROOT / "assets/js/trial-form.js")
-    return "\n".join(path.read_text(encoding="utf-8") for path in scripts if path.is_file())
+    scripts = text_files_under("assets/js", {".js", ".mjs", ".cjs"})
+    return "\n".join(path.read_text(encoding="utf-8") for path in scripts)
+
+
+def public_supporting_source() -> str:
+    paths = (
+        text_files_under("partials", {".html"})
+        + text_files_under("assets/css", {".css"})
+    )
+    return "\n".join(path.read_text(encoding="utf-8") for path in paths)
+
+
+def public_surface_source(source: dict[str, str], script: str) -> str:
+    return "\n".join(source.values()) + "\n" + script + "\n" + public_supporting_source()
 
 
 def trial_form_source() -> str:
     path = ROOT / "assets/js/trial-form.js"
     return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+class HeadDirectiveParser(HTMLParser):
+    """Collect canonical links and robots directives independent of attribute order."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.canonicals: list[str] = []
+        self.robots: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        attributes = {
+            key.casefold(): (value or "")
+            for key, value in attrs
+        }
+        if tag.casefold() == "link":
+            relationships = {
+                token.casefold()
+                for token in attributes.get("rel", "").split()
+            }
+            if "canonical" in relationships:
+                self.canonicals.append(attributes.get("href", ""))
+        elif (
+            tag.casefold() == "meta"
+            and attributes.get("name", "").strip().casefold() == "robots"
+        ):
+            self.robots.append(attributes.get("content", ""))
+
+
+def head_directives(markup: str) -> HeadDirectiveParser:
+    parser = HeadDirectiveParser()
+    parser.feed(markup)
+    return parser
+
+
+def normalized_meta_directives(value: str) -> tuple[str, ...]:
+    return tuple(
+        directive
+        for directive in re.split(r"[\s,]+", value.strip().casefold())
+        if directive
+    )
+
+
+def has_noindex(markup: str) -> bool:
+    return any(
+        "noindex" in directives or "none" in directives
+        for directives in map(normalized_meta_directives, head_directives(markup).robots)
+    )
+
+
+def has_exact_noindex(markup: str) -> bool:
+    robots = head_directives(markup).robots
+    return (
+        len(robots) == 1
+        and normalized_meta_directives(robots[0]) == ("noindex", "nofollow")
+    )
+
+
+def canonicals_are_exact(source: dict[str, str]) -> bool:
+    if any("salaamcenter.org" in markup.casefold() for markup in source.values()):
+        return False
+    for relative in PUBLIC_PAGES:
+        expected = PRODUCTION_ORIGIN + ROUTES[relative]
+        if head_directives(source.get(relative, "")).canonicals != [expected]:
+            return False
+    return True
+
+
+def normalized_robots_directives() -> tuple[tuple[str, str], ...] | None:
+    path = ROOT / "robots.txt"
+    if not path.is_file():
+        return None
+    directives: list[tuple[str, str]] = []
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw_line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        if ":" not in line:
+            return None
+        field, value = line.split(":", 1)
+        field = field.strip().casefold()
+        value = value.strip()
+        if not field or not value:
+            return None
+        directives.append((field, value))
+    return tuple(directives)
 
 
 def valid_whatsapp_number(value: object) -> bool:
@@ -231,12 +366,34 @@ def sitemap_is_valid() -> bool:
     except ET.ParseError:
         return False
     namespace = "http://www.sitemaps.org/schemas/sitemap/0.9"
-    locations = [node.text or "" for node in root.findall(f"{{{namespace}}}url/{{{namespace}}}loc")]
-    all_locations = [node for node in root.iter() if node.tag.endswith("loc")]
+    if (
+        root.tag != f"{{{namespace}}}urlset"
+        or root.attrib
+        or (root.text and root.text.strip())
+    ):
+        return False
+    locations: list[str] = []
+    for url in list(root):
+        children = list(url)
+        if (
+            url.tag != f"{{{namespace}}}url"
+            or url.attrib
+            or len(children) != 1
+            or children[0].tag != f"{{{namespace}}}loc"
+            or children[0].attrib
+            or list(children[0])
+            or (url.text and url.text.strip())
+            or (url.tail and url.tail.strip())
+            or (children[0].tail and children[0].tail.strip())
+        ):
+            return False
+        location = children[0].text or ""
+        if location != location.strip():
+            return False
+        locations.append(location)
     return (
-        root.tag == f"{{{namespace}}}urlset"
-        and len(locations) == len(all_locations)
-        and len(locations) == len(set(locations))
+        len(locations) == len(set(locations))
+        and len(locations) == len(SITEMAP_URLS)
         and set(locations) == SITEMAP_URLS
     )
 
@@ -245,7 +402,7 @@ def common_safety_checks(result: Result, config: dict, source: dict[str, str]) -
     public_joined = "\n".join(source.values())
     script = executable_source()
     handoff_script = trial_form_source()
-    executable_joined = public_joined + "\n" + script
+    public_surface = public_surface_source(source, script)
     deployment_safe = deployment_boundary_is_safe(ROOT, PUBLIC_PAGES)
     result.require(all(source.values()), "all 16 public HTML pages exist")
     result.require(config.get("production_origin") == PRODUCTION_ORIGIN, "production_origin is https://salaam.center")
@@ -271,6 +428,7 @@ def common_safety_checks(result: Result, config: dict, source: dict[str, str]) -
     result.require(config.get("booking_provider") == "none", "booking_provider is none")
     result.require(config.get("booking_endpoint") == "", "booking_endpoint is empty")
     result.require(config.get("analytics_mode") == "none", "analytics_mode remains none")
+    result.require(config.get("search_console_enabled") is False, "search_console_enabled remains false")
     result.require(config.get("github_pages_enabled") is False, "GitHub Pages is disabled")
     result.require(config.get("cname_required") is False, "CNAME is not required")
     result.require(not (ROOT / "CNAME").exists(), "no repository CNAME")
@@ -279,73 +437,119 @@ def common_safety_checks(result: Result, config: dict, source: dict[str, str]) -
         deployment_safe,
         "unreviewed repository paths fail closed with styled HTTP 404",
     )
-    result.require(public_contact_is_whatsapp_only(source, script), "no public email contact")
-    result.require(FORMSPREE_RE.search(executable_joined) is None, "no active Formspree reference")
     result.require(
-        NETWORK_SUBMISSION_RE.search(handoff_script) is None,
+        EMAIL_RE.search(public_surface) is None
+        and re.search(r"\btel:", public_surface, re.I) is None,
+        "no public email contact",
+    )
+    result.require(FORMSPREE_RE.search(public_surface) is None, "no active Formspree reference")
+    result.require(
+        NETWORK_SUBMISSION_RE.search(script) is None,
         "no browser network submission",
     )
     result.require(STORAGE_RE.search(script) is None, "no personal-data storage")
     result.require(whatsapp_links_are_valid(source, script, config.get("whatsapp_number")), "exact safe wa.me links")
     result.require(client_handoff_is_safe(source.get("book-trial/index.html", ""), handoff_script), "safe client-side WhatsApp handoff")
     result.require(success_page_is_truthful(source.get("success/index.html", "")), "Success page remains truthful")
-    result.require(not ANALYTICS_RE.search(executable_joined), "no analytics or advertising pixels")
-    result.require(not PAYMENT_RE.search(executable_joined), "no payment integration")
-    result.require(not SEARCH_CONSOLE_RE.search(executable_joined), "no Search Console verification")
+    result.require(not ANALYTICS_RE.search(public_surface), "no analytics or advertising pixels")
+    result.require(not PAYMENT_RE.search(public_surface), "no payment integration")
+    result.require(not SEARCH_CONSOLE_RE.search(public_surface), "no Search Console verification")
     result.require(all(name in public_joined for name in PROTECTED_NAMES), "all protected teacher content remains")
     result.require(all(video_id in public_joined for video_id in PROTECTED_VIDEO_IDS), "all protected teacher and student video IDs remain")
     pricing = source.get("pricing/index.html", "")
     result.require(all(price in pricing for price in APPROVED_PRICES), "public prices remain approved")
-    folded = executable_joined.casefold()
     result.require(
-        deployment_safe
-        and "€8 per completed" not in folded
-        and "teacher rate" not in folded,
+        ECONOMICS_LEAK_RE.search(public_surface) is None,
         "no internal teacher-cost information is served by the website",
     )
 
 
-def prelaunch(config: dict, source: dict[str, str], result: Result) -> None:
-    result.require(config.get("site_mode") == "prelaunch", "site_mode is prelaunch")
-    result.require(all('name="robots" content="noindex, nofollow"' in page for page in source.values()), "noindex, nofollow on every public HTML page")
-    robots = (ROOT / "robots.txt").read_text(encoding="utf-8")
-    result.require("User-agent: *" in robots and "Disallow: /" in robots, "robots.txt blocks crawling")
-    result.require(config.get("privacy_policy_final_approved") is False, "privacy_policy_final_approved is not claimed")
-    result.require(config.get("terms_final_approved") is False, "terms_final_approved is not claimed")
-    result.require(config.get("search_console_enabled") is False, "search_console_enabled is not claimed")
-    common_safety_checks(result, config, source)
+def readiness_summary(result: Result, label: str) -> None:
     if result.failures:
-        print(f"FAIL: prelaunch readiness ({len(result.failures)} requirement(s))")
+        print(f"FAIL: {label} ({len(result.failures)} requirement(s))")
     else:
-        print("PASS: prelaunch readiness")
+        print(f"PASS: {label}")
 
 
-def production(config: dict, source: dict[str, str], result: Result) -> None:
+def prelaunch(config: dict, source: dict[str, str], result: Result) -> None:
+    """Keep the historical entrypoint useful after the production switch."""
+
+    if config.get("site_mode") == "production":
+        production(
+            config,
+            source,
+            result,
+            readiness_label="prelaunch/backward-compatible readiness",
+        )
+        return
+
+    result.require(config.get("site_mode") == "prelaunch", "site_mode is prelaunch")
+    result.require(
+        all(has_exact_noindex(source.get(page, "")) for page in PUBLIC_PAGES),
+        "noindex, nofollow on every public HTML page",
+    )
+    result.require(
+        normalized_robots_directives() == PRELAUNCH_ROBOTS_DIRECTIVES,
+        "robots.txt blocks crawling",
+    )
+    result.require(
+        config.get("privacy_policy_final_approved") is False,
+        "privacy_policy_final_approved is not claimed",
+    )
+    result.require(
+        config.get("terms_final_approved") is False,
+        "terms_final_approved is not claimed",
+    )
+    result.require(
+        config.get("search_console_enabled") is False,
+        "search_console_enabled is not claimed",
+    )
+    common_safety_checks(result, config, source)
+    readiness_summary(result, "prelaunch/backward-compatible readiness")
+
+
+def production(
+    config: dict,
+    source: dict[str, str],
+    result: Result,
+    *,
+    readiness_label: str = "production readiness",
+) -> None:
     requirements = {
         "site_mode is production": config.get("site_mode") == "production",
-        "legal_controller_name is present": bool(str(config.get("legal_controller_name", "")).strip()),
-        "legal_controller_address is present": bool(str(config.get("legal_controller_address", "")).strip()),
+        "legal_controller_name is exact": config.get("legal_controller_name") == LEGAL_CONTROLLER_NAME,
+        "legal_controller_address is exact": config.get("legal_controller_address") == LEGAL_CONTROLLER_ADDRESS,
         "privacy_policy_final_approved is true": config.get("privacy_policy_final_approved") is True,
         "terms_final_approved is true": config.get("terms_final_approved") is True,
         "whatsapp_live_link_tested is true": config.get("whatsapp_live_link_tested") is True,
     }
     for label, condition in requirements.items():
         result.require(condition, label)
-    result.require(all('name="robots" content="noindex, nofollow"' not in page for page in source.values()), "noindex, nofollow removed from production pages")
-    robots = (ROOT / "robots.txt").read_text(encoding="utf-8")
-    result.require("Disallow: /" not in robots, "robots.txt allows intended crawling")
-    result.require(sitemap_is_valid(), "sitemap.xml is present and valid")
-    canonical_ok = all(
-        f'<link rel="canonical" href="{PRODUCTION_ORIGIN + ROUTES[relative]}"' in page
-        and "salaamcenter.org" not in page
-        for relative, page in source.items()
+    result.require(
+        all(not has_noindex(source.get(page, "")) for page in INDEXABLE_PAGES),
+        "intended indexable pages have no noindex directive",
     )
-    result.require(canonical_ok, "canonical URLs point only to https://salaam.center")
-    joined = "\n".join(source.values())
-    production_content = joined + "\n" + json.dumps(config, ensure_ascii=False, sort_keys=True)
+    result.require(
+        all(has_exact_noindex(source.get(page, "")) for page in NOINDEX_PAGES),
+        "Success and 404 retain exact noindex, nofollow",
+    )
+    result.require(
+        normalized_robots_directives() == PRODUCTION_ROBOTS_DIRECTIVES,
+        "robots.txt allows intended crawling",
+    )
+    result.require(sitemap_is_valid(), "sitemap.xml is present and valid")
+    result.require(
+        canonicals_are_exact(source),
+        "canonical URLs point only to https://salaam.center",
+    )
+    production_content = (
+        public_surface_source(source, executable_source())
+        + "\n"
+        + json.dumps(config, ensure_ascii=False, sort_keys=True)
+    )
     result.require(not PLACEHOLDER_RE.search(production_content), "no placeholder strings remain")
     common_safety_checks(result, config, source)
-    print("EXPECTED BLOCKED PRODUCTION STATE" if result.failures else "PASS: production readiness")
+    readiness_summary(result, readiness_label)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

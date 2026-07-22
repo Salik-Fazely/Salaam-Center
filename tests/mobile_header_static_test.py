@@ -80,6 +80,18 @@ class MobileHeaderStaticTests(unittest.TestCase):
         self.assertIn(".footer__col--brand", tablet_rules)
         self.assertIn("grid-column: 1 / -1;", tablet_rules)
 
+    def test_mobile_menu_offsets_match_the_compact_container_gutter(self):
+        css = source(STYLES)
+        compact_rules = css.split("@media (max-width: 760px)", 1)[1].split(
+            "@media (max-width: 540px)", 1
+        )[0]
+        menu = re.search(r"\.nav__links\.is-enhanced\s*\{([^}]*)\}", compact_rules, re.S)
+        self.assertIsNotNone(menu)
+        self.assertIn("right: -1rem", menu.group(1))
+        self.assertIn("left: -1rem", menu.group(1))
+        self.assertIn("padding-right: 1rem", menu.group(1))
+        self.assertIn("padding-left: 1rem", menu.group(1))
+
 
 if __name__ == "__main__":
     unittest.main()

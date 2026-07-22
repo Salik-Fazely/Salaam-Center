@@ -1,6 +1,6 @@
 # Salaam Center Approved Facts
 
-This document is the concise source of truth for the Salaam Center English pre-launch website. Anything listed as unresolved must not be guessed or published as a final promise.
+This document is the concise source of truth for the Salaam Center English production website. Anything reserved for a later operational phase must not be guessed or published as a current promise.
 
 ## 1. Approved brand facts
 
@@ -107,9 +107,9 @@ Do not add teachers, student evidence, biographies, experience claims, videos, t
 
 The visual character is warm, calm, trustworthy, modern, minimal, premium, culturally rooted, parent-friendly, safe and hopeful. Use generous whitespace, clear hierarchy, accessible contrast, simple shapes, visible focus states and system fonts. The temporary identity is a clean text wordmark with a simple “S” favicon.
 
-## 9. Approved pre-launch private-plan pricing
+## 9. Approved production private-plan pricing
 
-The following pricing is independently approved for the current noindex Salaam Center pre-launch website. It applies only to private one-to-one Quran and Dari/Persian classes. Every price is in EUR, per learner, for one selected program, paid in full before paid lessons begin, non-transferable between learners and not automatically renewed.
+The following pricing is independently approved for the Salaam Center production website. It applies only to private one-to-one Quran and Dari/Persian classes. Every price is in EUR, per learner, for one selected program, paid in full before paid lessons begin, non-transferable between learners and not automatically renewed.
 
 ### Flexible 4-week plans
 
@@ -150,7 +150,7 @@ Pricing for Afghan Culture & Islamic Ethics group classes will be published when
 - The Culture & Character mini-lessons are short supplementary digital or guided resources. They are not additional private 40-minute live classes and do not replace the Afghan Culture & Islamic Ethics group program.
 - Digital certificate eligibility is limited to the 12-week plan. At least 80% of scheduled paid classes must be completed and any outstanding payment obligation must be resolved. It acknowledges participation and completion and is not academic accreditation, a qualification or a government-recognised certificate.
 - Progress summary every four weeks: for a minor, it is shared with the parent or guardian; an adult learner receives it directly. It may cover attendance, areas practised, teacher observations and suggested next steps without promising formal assessment or outcomes.
-- Refund and consumer-withdrawal terms remain pending legal and accounting review and must be shown before payment.
+- Consumer cancellation, refund and withdrawal rights apply where required by applicable law. Service-specific information, including any effect of asking for lessons to begin during a statutory withdrawal period, must be provided before payment.
 
 ## Approved internal teacher compensation — not approved for public use
 
@@ -183,29 +183,29 @@ At the approved teacher compensation of €1.50 per eligible 40-minute lesson, a
 
 Teacher compensation, teacher cost per lesson, internal revenue per lesson, teacher-cost contribution, contribution margins, profitability calculations and this compensation policy must not be published in public HTML, metadata, structured data, navigation or executable JavaScript.
 
-## Internal deployment blockers
+## Internal operational status
 
-The pricing page may exist in the noindex pre-launch website, but none of the following is approved as complete for production use:
+Salaam Center is approved for production indexing. Privacy Policy is approved, Terms and Conditions are approved, and the manual WhatsApp test is complete. The status record below distinguishes completed launch decisions from deliberately inactive capabilities and future business reviews:
 
-- **Teacher-compensation review** — resolved for current pre-launch pricing at €1.50 per eligible 40-minute lesson
-- **Gross-margin review** — direct teacher-cost contribution is recorded, but the final minimum net-margin policy remains unresolved
-- **Payment-provider selection and fees** — unresolved; no payment provider may be named or activated
-- **Tax and accounting review** — unresolved, including tax treatment and price presentation
-- **Refund and consumer-law review** — unresolved for the legal entity, customer locations, payment method and service start
-- **Administrative cost** — unresolved
-- **Marketing and acquisition cost** — unresolved
-- **Refund and chargeback exposure** — unresolved
+- **Teacher-compensation review** — resolved for current production pricing at €1.50 per eligible 40-minute lesson
+- **Gross-margin review** — direct teacher-cost contribution is recorded; a Final minimum net-margin policy remains a future internal business decision
+- **Payment-provider selection and fees** — no provider is approved or active, and the production website has no payment integration or public checkout
+- **Tax and accounting review** — service-specific tax and price information must be settled before any payment is accepted
+- **Refund and consumer-law review** — the final Terms preserve consumer cancellation, refund and withdrawal rights under applicable law; service-specific information must be provided before payment
+- **Administrative cost** — remains a future internal operating-cost input
+- **Marketing and acquisition cost** — remains a future internal operating-cost input
+- **Refund and chargeback exposure** — remains a future internal payment-workflow input
 - **Future teacher-rate changes** — require a new economics review before pricing or compensation changes
-- **Legal-entity information** — unresolved
-- **Final Terms and Conditions** — unresolved and not approved for public contractual use
-- **Final Privacy Policy** — unresolved and not approved as a final legal policy
-- **Initial contact channel** — WhatsApp is approved and active; the remaining operational check is a manual live-link, receive-and-reply test on mobile and WhatsApp Web/desktop
+- **Legal-entity information** — approved: operator **Salaam Center**; correspondence address **Sabadell, Barcelona**
+- **Final Terms and Conditions** — approved with an effective date of **22 July 2026**
+- **Final Privacy Policy** — approved with an effective date of **22 July 2026**
+- **Initial contact channel** — WhatsApp is approved and active; its live-link, receive-and-reply flow has been manually verified on the approved mobile and WhatsApp Web/desktop surfaces
 - **Website handoff** — the client-side message preparation is active and intentionally has no form backend, database or automatic messaging
-- **Analytics** — initial launch is approved with no analytics; any future analytics proposal requires separate approval and privacy review
-- **Production SEO** — production-origin metadata and an unsubmitted sitemap are prepared; all pages remain noindex and crawling remains blocked
-- **Deployment** — Cloudflare Pages already publishes from `main`; production indexing, legal approval and the final manual WhatsApp live-link test remain separate readiness blockers
+- **Analytics** — production launch is approved with no analytics or advertising pixels; any future analytics proposal requires separate approval and privacy review
+- **Production SEO** — indexing is enabled for the 14 intended canonical pages; Success and 404 retain `noindex, nofollow`; the sitemap is available but has not been submitted manually; Search Console is not enabled
+- **Deployment** — approved on Cloudflare Pages from GitHub `main`, with the apex and `www` domains and HTTPS active
 
-Teacher-compensation review is resolved for current pre-launch pricing. Production approval still requires review of payment-provider fees, tax and accounting treatment, administrative cost, marketing and acquisition cost, refund and chargeback exposure, consumer law and the final minimum net-margin policy.
+Teacher-compensation review is resolved for current production pricing. Payment-provider fees, tax and accounting treatment, administrative cost, marketing and acquisition cost, refund and chargeback exposure, consumer-law implementation and the Final minimum net-margin policy remain future operational considerations; they do not authorize a payment integration and do not reverse the website's production-indexing approval.
 
 ### Internal inherited-claim audit — not approved for public use
 
@@ -242,17 +242,17 @@ The exact internal comparison calculations are approximately 19.0%, 37.7% and 22
 
 ## Internal pricing-decision audit
 
-This internal record preserves the former unresolved questions without presenting them as current public uncertainty. Pricing scope, learner basis, program basis, payment timing, renewal, validity, rescheduling, absence rules, make-up eligibility, completion-recognition eligibility and benefit definitions are resolved by the approved facts above and `docs/COMMERCIAL-AND-ENROLMENT.md`.
+This internal record preserves former open questions without presenting them as current public uncertainty. Pricing scope, learner basis, program basis, payment timing, renewal, validity, rescheduling, absence rules, make-up eligibility, completion-recognition eligibility, consumer-rights treatment and benefit definitions are resolved by the approved facts above, the final Terms and `docs/COMMERCIAL-AND-ENROLMENT.md`.
 
-The following remain unresolved and not approved for public claims:
+The following remain future implementation decisions and are not approved for public claims:
 
 - Whether applicable taxes must be added to or incorporated into the displayed amounts
 - The final payment provider and payment method
-- Refund and consumer-withdrawal terms
+- The service-specific payment and consumer-rights information supplied before a particular purchase
 - Whether a learner may change frequency during an active plan
 - The exact delivery platform and final content inventory for supplementary resources
 
-## 11. Unresolved operational rules
+## 11. Future operational details
 
 - Live scheduling and class availability
 - Exact group size and timetable
@@ -261,29 +261,27 @@ The following remain unresolved and not approved for public claims:
 - Final curriculum stages, homework and materials
 - Formal assessment process, if any
 - Delivery tooling for progress summaries, supplementary resources and eligible completion recognition
-- Final manual verification of the approved WhatsApp Business profile, click-to-chat link, message receiving and replies
 - Secure payment provider and operational payment workflow (the approved sequence is documented above)
 - Any separately approved future analytics architecture and privacy treatment
-- Production indexing activation, including noindex removal and production robots rules
 
 ## 12. Approved initial contact details
 
 WhatsApp is the only initial public contact channel. The exact approved WhatsApp Business number is `34614401172` (display format `+34 614 401 172`) and the only approved generic click-to-chat destination is `https://wa.me/34614401172`. Domain email is not required and no public email address or `mailto:` link is approved for initial launch. The WhatsApp number is a messaging route, not approval for a telephone-call link.
 
-For a minor, the parent or guardian must be the contact. Children must not be invited to contact a teacher privately. No public physical address or social account is approved until separately reviewed.
+For a minor, the parent or guardian must be the contact. Children must not be invited to contact a teacher privately. The approved operator is **Salaam Center** and the approved correspondence address is **Sabadell, Barcelona**. No public social account is approved until separately reviewed.
 
-## 13. Unresolved legal details
+## 13. Approved legal and policy details
 
-- Legal entity and operator identity
-- Registered or trading address
-- Applicable jurisdiction
-- Final privacy policy
-- Final terms and conditions
-- Data-controller and retention details
-- Approved processors and service providers
-- Final cancellation, refund and rescheduling terms
+- Operator identity: **Salaam Center**
+- Correspondence address: **Sabadell, Barcelona**
+- WhatsApp contact: **+34 614 401 172**, linked through `https://wa.me/34614401172`
+- Final Privacy Policy: approved, effective **22 July 2026**
+- Final Terms and Conditions: approved, effective **22 July 2026**
+- Data handling, retention, third-party service information and privacy-request routes are stated conservatively in the final Privacy Policy
+- Cancellation and rescheduling rules are stated in the final Terms; consumer cancellation, refund and withdrawal rights apply where required by applicable law, with service-specific information provided before payment
+- No unsupported jurisdiction, company-registration number, tax position, data-protection officer, data-location guarantee or encryption guarantee is claimed
 
-The pre-launch privacy and terms pages are factual placeholders, not final legal documents.
+The production Privacy Policy and Terms are the approved public legal pages for the current website and service position.
 
 ## 14. Inherited content that must not be reused
 
@@ -306,11 +304,11 @@ Because the build output remains the repository root, the committed `_redirects`
 
 The remote `Create CNAME` commit `721337d6c53f289b6ca512a8d89439dfc1cacbc9` was inspected and reconciled as a direct, CNAME-only fast-forward whose file contained exactly `salaam.center`. The unnecessary repository-root `CNAME` was then removed through a normal forward change because custom domains are configured in Cloudflare. A GitHub Pages CNAME file is not required. GitHub Pages must not be configured, no replacement CNAME should be added, and DNS must not be changed through this repository. No Cloudflare or DNS setting was changed by the migration.
 
-Deployment does not approve production indexing, Search Console, analytics, payments or final legal wording. Those decisions remain governed by the configuration and launch checklist.
+Deployment is approved for production indexing under the final legal wording. Search Console is not enabled, the sitemap is available but has not been submitted manually, and analytics, advertising pixels, payments and public checkout remain deliberately absent. Those choices remain governed by the configuration and launch checklist.
 
-## 16. Pre-launch noindex rule
+## 16. Production indexing rule
 
-Every public HTML page must contain `noindex, nofollow`. Production-origin canonical metadata and an unsubmitted sitemap may be prepared while crawling remains blocked. This directive may be removed only during an explicitly approved deployment and SEO phase, together with a complete metadata, domain and indexing review.
+The 14 intended canonical content pages are indexable and included in `sitemap.xml`. The Success page and the root 404 page are deliberately excluded from the sitemap and must retain the exact `noindex, nofollow` directive. Production `robots.txt` allows crawling and points to `https://salaam.center/sitemap.xml`. Direct `site-runtime/` and repository-only paths remain outside the public route allowlist and return HTTP 404.
 
 ## 17. Production launch-readiness decisions
 
@@ -325,7 +323,7 @@ Every public HTML page must contain `noindex, nofollow`. Production-origin canon
 
 ### Approved client-side WhatsApp handoff
 
-- `config/launch-readiness.json` is the repository-side launch state of record and remains in `prelaunch` mode until the genuine legal, indexing and manual live-link blockers are resolved.
+- `config/launch-readiness.json` is the repository-side launch state of record and is set to `production` after legal approval, the indexing switch and the manual live-link test were completed.
 - Formspree is superseded and inactive. There is no form provider, backend endpoint, database, public checkout or WhatsApp Business Platform API. No WhatsApp API credentials or tokens are used.
 - The website validates the approved fields and prepares a plain-text WhatsApp message locally in the adult visitor's browser. It does not submit or store that information on a Salaam Center server, use `fetch` or `XMLHttpRequest`, or place the information in the current website URL.
 - The handoff also prohibits `sendBeacon`, tracking-pixel image assignments and other browser network-submission paths. The Free Trial document uses a no-referrer policy, and new-window access to the opener is severed while retaining a blocked-popup fallback.
@@ -341,10 +339,12 @@ Every public HTML page must contain `noindex, nofollow`. Production-origin canon
 
 The trial form must not collect any email address, learner name or surname, child phone number, passport or identity document, exact date of birth, medical information or diagnoses, school name, home address, payment details, files, social-media handles, religious-confession declarations, marketing consent, WhatsApp number, financial information, government identifiers or passwords. It must not include a honeypot, provider metadata or a provider privacy checkbox.
 
-### Production readiness flags and blockers
+### Production readiness status
 
-- Legal blockers: approved controller/operator identity, suitable disclosure address, final legal bases and retention rules, rights and complaint process, consumer withdrawal and refund treatment, taxes, applicable law, dispute process, effective date, and final Privacy and Terms approvals.
-- Indexing blockers: removal of `noindex, nofollow`, production `robots.txt` state and final placeholder-copy review.
-- Operational blocker: a final manual test of the approved WhatsApp Business profile and live click-to-chat link on Android or iPhone and WhatsApp Web/desktop, including message receiving and replies. `whatsapp_live_link_tested` remains false until this succeeds without sending test data from automated checks.
-- GitHub Pages, a repository CNAME, Formspree, domain email, analytics and payment integration are not blockers because they are deliberately outside the approved architecture.
-- DNS and Cloudflare settings must not be changed through this repository migration.
+- Legal approval is complete for operator **Salaam Center**, correspondence address **Sabadell, Barcelona**, effective date **22 July 2026**, and the final Privacy Policy and Terms.
+- Indexing is enabled for the 14 intended canonical pages. Success and 404 retain `noindex, nofollow`, and production `robots.txt` references the canonical sitemap.
+- The manual WhatsApp test is complete for the approved Business profile and click-to-chat link on Android or iPhone and WhatsApp Web/desktop, including message receiving and replies. `whatsapp_live_link_tested` is `true`.
+- The sitemap is available but has not been submitted manually. Search Console remains disabled and has no verification or integration in the repository.
+- GitHub Pages, a repository CNAME, Formspree, domain email, analytics, advertising pixels, a backend and payment integration remain deliberately outside the approved architecture.
+- Cloudflare Pages remains the hosting source of truth, automatic deployment from GitHub `main` remains active, and the production domains and HTTPS are active.
+- DNS and Cloudflare settings were unchanged by the production approval and must not be changed through this repository release.

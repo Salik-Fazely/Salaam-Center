@@ -1,4 +1,4 @@
-/* Salaam Center English pre-launch visual foundation */
+/* Salaam Center English website visual foundation */
 
 :root {
   --blue: #2b87d5;
@@ -505,7 +505,7 @@ li + li {
   margin-top: 2rem;
 }
 
-.prelaunch-note {
+.service-note {
   display: inline-flex;
   align-items: center;
   gap: 0.65rem;
@@ -515,7 +515,7 @@ li + li {
   font-weight: 650;
 }
 
-.prelaunch-note::before {
+.service-note::before {
   width: 0.55rem;
   height: 0.55rem;
   border-radius: 50%;
@@ -554,7 +554,7 @@ li + li {
 .feedback-video-card,
 .notice,
 .trust-panel,
-.policy-placeholder {
+.policy-document {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--white);
@@ -567,7 +567,7 @@ li + li {
 .step-card,
 .notice,
 .trust-panel,
-.policy-placeholder {
+.policy-document {
   padding: clamp(1.5rem, 3vw, 2.25rem);
 }
 
@@ -1096,17 +1096,17 @@ li + li {
   padding: 1rem 1.25rem 1.25rem;
 }
 
-.policy-placeholder {
+.policy-document {
   max-width: 48rem;
   margin-inline: auto;
   padding: clamp(2rem, 5vw, 3.5rem);
 }
 
-.policy-placeholder h1 {
+.policy-document h1 {
   font-size: clamp(2.25rem, 5vw, 3.8rem);
 }
 
-.policy-placeholder .notice {
+.policy-document .notice {
   margin-top: 2rem;
 }
 
@@ -1383,6 +1383,13 @@ li + li {
   .container,
   .container--text {
     width: min(100% - 2rem, var(--container));
+  }
+
+  .nav__links.is-enhanced {
+    right: -1rem;
+    left: -1rem;
+    padding-right: 1rem;
+    padding-left: 1rem;
   }
 
   .card-grid--2,

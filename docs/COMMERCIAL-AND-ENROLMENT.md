@@ -2,7 +2,7 @@
 
 ## Status and authority
 
-This is the internal operational source of truth for the Salaam Center noindex pre-launch commercial and enrolment foundation. It records approved public facts, internal implementation definitions and unresolved deployment blockers. It is documentation only, not public contractual wording, deployment approval or authority to collect information or payment.
+This is the internal operational source of truth for the Salaam Center production commercial and enrolment foundation. It records approved public facts, internal implementation definitions, completed launch decisions and capabilities reserved for later phases. It supports the public Terms and Privacy Policy but does not itself authorize collection of payment.
 
 `SALAM-CENTER-APPROVED-FACTS.md` remains the concise factual authority. If later legal, accounting or operational approval changes this model, both documents and the public regression fixtures must be updated together.
 
@@ -16,9 +16,12 @@ This is the internal operational source of truth for the Salaam Center noindex p
 - A WhatsApp message is an enquiry, not a confirmed booking. It creates no payment obligation. A trial exists only after Salaam Center confirms a suitable teacher and schedule.
 - A parent or guardian must make the enquiry and remain the primary contact for a minor; a child is never invited to contact a teacher privately.
 - Initial launch has no analytics, no advertising pixels and no payments or public checkout.
+- The approved operator is **Salaam Center**, the correspondence address is **Sabadell, Barcelona**, and the final Privacy Policy and Terms are effective **22 July 2026**.
+- The manual WhatsApp test is complete, including the approved profile, mobile and WhatsApp Web/desktop handoff, message receiving and replies. The repository launch state records `whatsapp_live_link_tested` as `true`.
 - Cloudflare Pages is the production hosting source of truth. Project `salaam-center` deploys automatically from GitHub `main` to `salaam.center` and `www.salaam.center`.
 - Repository-root output is constrained by a fail-closed static `_redirects` public-route allowlist. Exact reviewed URLs proxy to distinct committed `site-runtime/` backing artifacts, whose bytes must match their reviewed sources. A final catchall proxies every case-changed, encoded, repository-only and future unknown path to a guaranteed-missing sentinel, causing Cloudflare Pages to render the styled root error template with HTTP 404 without serving the requested file. Preflight rejects route drift, mirror drift and unclassified files. This uses no Pages Function, `_worker.js`, form backend or Cloudflare dashboard change.
 - The reconciled remote `Create CNAME` commit added only `salaam.center`; the unnecessary repository CNAME was removed through a forward change. GitHub Pages must not be configured, DNS must not be changed through this repository, and no Cloudflare or DNS configuration change belongs to this migration.
+- The website is approved for production indexing: 14 intended canonical pages are indexable, while Success and 404 retain `noindex, nofollow`. Production `robots.txt` points to the canonical sitemap. The sitemap is available but has not been submitted manually, and Search Console is not enabled.
 
 ## Approved offer scope
 
@@ -78,7 +81,7 @@ Public copy uses euro savings, not percentage badges. The exact percentages are 
 7. Pay the selected plan in full before the first paid class.
 8. Begin paid lessons.
 
-There is no automatic online enrolment, public checkout, saved-card subscription, instalment plan, payment button or named provider. Payment instructions are provided only after the trial, teacher availability and schedule are confirmed. EUR is the only approved displayed currency; no conversion or exchange-rate claim is approved. Tax treatment remains unresolved.
+There is no automatic online enrolment, public checkout, saved-card subscription, instalment plan, payment button or named provider. Payment instructions are provided only after the trial, teacher availability and schedule are confirmed. EUR is the only approved displayed currency; no conversion or exchange-rate claim is approved. Any applicable tax treatment and service-specific price information must be settled and disclosed before payment is accepted.
 
 ## Plan validity
 
@@ -176,9 +179,9 @@ Private-plan pricing does not cover the group program. The group program is not 
 
 ## Refund and legal status
 
-Refund and consumer-withdrawal rules are pending legal and accounting review before payments are activated. Relevant inputs include legal-entity location, customer location, payment method, service start date, applicable consumer law and any consent needed to begin services.
+Consumer cancellation, refund and withdrawal rights apply where required by applicable law. Before accepting payment, Salaam Center must provide service-specific information appropriate to the learner's location, payment method and proposed service start, including any effect of asking for lessons to begin during a statutory withdrawal period.
 
-The public Terms page is a non-contractual pre-launch summary. Complete contractual terms must be presented before payment is accepted. The Privacy page is not a final legal policy.
+The final public Terms and Privacy Policy are approved with an effective date of **22 July 2026**. The operator is **Salaam Center**, the correspondence address is **Sabadell, Barcelona**, and WhatsApp at **+34 614 401 172** is the only initial public contact route. The applicable version of the Terms and any service-specific payment information must be presented before payment is accepted.
 
 ## Internal teacher-compensation operations
 
@@ -254,34 +257,34 @@ Each completed free 40-minute trial costs Salaam Center €1.50 in direct teache
 
 “At the approved teacher compensation of €1.50 per eligible 40-minute lesson, all six approved private plans have positive and currently acceptable direct teacher-cost contribution. The lowest direct contribution margin is 68.56% before payment fees, taxes, administration, marketing and other operating costs.”
 
-This conclusion addresses direct teacher cost only. It is not a claim of final profit, net profit or production readiness.
+This conclusion addresses direct teacher cost only. It is not a claim of final profit, net profit or authority to activate online payment collection.
 
-## Deployment blockers
+## Internal operational status
 
-- **Teacher-compensation review** — resolved for current pre-launch pricing.
-- **Gross-margin review** — direct teacher-cost contribution is recorded; the Final minimum net-margin policy remains unresolved.
-- **Payment-provider selection** — unresolved; no provider is approved or active.
-- **Payment-provider fees** — unresolved.
-- **Tax and accounting treatment** — unresolved.
-- **Administrative cost** — unresolved.
-- **Marketing and acquisition cost** — unresolved.
-- **Refund and chargeback exposure** — unresolved.
-- **Consumer-law review** — unresolved.
+- **Teacher-compensation review** — resolved for current production pricing.
+- **Gross-margin review** — direct teacher-cost contribution is recorded; the Final minimum net-margin policy remains a future internal business decision.
+- **Payment-provider selection** — no provider is approved or active; selecting one would require a separate review before any integration.
+- **Payment-provider fees** — a future payment-workflow input, with no fees or provider claims included in the current website.
+- **Tax and accounting treatment** — service-specific tax and price disclosures must be settled before payment is accepted.
+- **Administrative cost** — a future internal operating-cost input.
+- **Marketing and acquisition cost** — a future internal operating-cost input.
+- **Refund and chargeback exposure** — a future internal payment-workflow input.
+- **Consumer-law review** — final Terms preserve rights under applicable law; service-specific consumer information must be provided before payment.
 - **Future teacher-rate changes** — require a new economics review before compensation or pricing changes.
-- **Legal-entity information** — unresolved.
-- **Final Terms and Conditions** — unresolved.
-- **Final Privacy Policy** — unresolved.
+- **Legal-entity information — approved**: operator **Salaam Center**, correspondence address **Sabadell, Barcelona**.
+- **Final Terms and Conditions — approved**, effective **22 July 2026**.
+- **Final Privacy Policy — approved**, effective **22 July 2026**.
 - **Contact mailbox** — superseded for initial launch; domain email is not required because WhatsApp is the only public contact route.
 - **Live form and backend** — Formspree is superseded; the approved browser-local WhatsApp handoff has no backend, endpoint, storage or automatic message sending.
-- **Analytics** — initial launch is explicitly approved with no analytics and no advertising pixels.
-- **Production SEO** — production-origin metadata and an unsubmitted sitemap are prepared; pages remain noindex and crawling remains blocked.
-- **Deployment approval** — Cloudflare Pages deployment from `main`, the custom domains and HTTPS are active. GitHub Pages and a repository CNAME are prohibited; production indexing, final legal approvals and the manual WhatsApp live-link check remain unresolved.
-
+- **Analytics** — production is approved with no analytics and no advertising pixels.
+- **Production SEO — indexing enabled** for the 14 intended canonical pages; Success and 404 retain `noindex, nofollow`; the sitemap is available but has not been submitted manually; Search Console is not enabled.
+- **Deployment approval — approved** for Cloudflare Pages deployment from GitHub `main`; the apex and `www` custom domains and HTTPS are active. GitHub Pages and a repository CNAME remain prohibited, and DNS was unchanged.
+- **Manual WhatsApp verification — complete** for the approved Business profile, mobile and WhatsApp Web/desktop links, message receiving and replies.
 - **Deployment-surface containment** — `_redirects` must remain the exact reviewed public-route allowlist, the `site-runtime/` backing artifacts must remain byte-identical to their sources, and the missing catchall sentinel must remain absent. Preflight and trust scanning must fail on route drift, mirror drift, unclassified files or any Pages Functions surface.
 
 ## Change control
 
-Any change to price, scope, class count, validity, trial, absence rules, benefits or eligibility requires explicit approval plus coordinated updates to public copy, authority documentation, scanner associations and regression tests. Legal or operational readiness does not follow merely from implementing the static noindex page.
+Any change to price, scope, class count, validity, trial, absence rules, benefits or eligibility requires explicit approval plus coordinated updates to public copy, authority documentation, scanner associations and regression tests. Production approval does not authorize unreviewed changes or activate analytics, payments, Search Console, a backend, public email, GitHub Pages or a repository CNAME.
 
 ## Initial launch privacy and storage position
 
